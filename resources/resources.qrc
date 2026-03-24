@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icon/OutputHooker.ico</file>
+        <file>logo/OutputHooker.png</file>
+        <file>ini/template.ini</file>
+    </qresource>
+</RCC>

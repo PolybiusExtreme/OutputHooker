@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>OutputHooker</class>
+ <widget class="QMainWindow" name="OutputHooker">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>350</width>
+    <height>450</height>
+   </rect>
+  </property>
+  <property name="acceptDrops">
+   <bool>false</bool>
+  </property>
+  <property name="windowTitle">
+   <string>OutputHooker</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QTextBrowser" name="textBrowser">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>350</width>
+      <height>430</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>350</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuOptions">
+    <property name="title">
+     <string>Options</string>
+    </property>
+    <addaction name="actionTestOutputs"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuScript_Editor">
+    <property name="tearOffEnabled">
+     <bool>false</bool>
+    </property>
+    <property name="title">
+     <string>Script Editor</string>
+    </property>
+    <property name="separatorsCollapsible">
+     <bool>false</bool>
+    </property>
+    <addaction name="actionEditDefaultINI"/>
+    <addaction name="actionEditSpecificGameINI"/>
+    <addaction name="actionEditCurrentGameINI"/>
+   </widget>
+   <widget class="QMenu" name="menuAbout">
+    <property name="title">
+     <string>About</string>
+    </property>
+    <property name="toolTipsVisible">
+     <bool>false</bool>
+    </property>
+    <addaction name="actionAboutWindow"/>
+   </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <addaction name="actionNotification"/>
+    <addaction name="actionDefaultINI"/>
+   </widget>
+   <addaction name="menuOptions"/>
+   <addaction name="menuSettings"/>
+   <addaction name="menuScript_Editor"/>
+   <addaction name="menuAbout"/>
+  </widget>
+  <action name="actionTestOutputs">
+   <property name="text">
+    <string>Test Outputs</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::QuitRole</enum>
+   </property>
+  </action>
+  <action name="actionEditDefaultINI">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Edit default.ini</string>
+   </property>
+  </action>
+  <action name="actionEditCurrentGameINI">
+   <property name="text">
+    <string>Edit ini file for current game</string>
+   </property>
+   <property name="toolTip">
+    <string>Edit ini file for current game</string>
+   </property>
+  </action>
+  <action name="actionEditSpecificGameINI">
+   <property name="text">
+    <string>Edit specific game ini file</string>
+   </property>
+   <property name="toolTip">
+    <string>Edit specific game ini file</string>
+   </property>
+  </action>
+  <action name="actionAboutWindow">
+   <property name="text">
+    <string>OutputHooker</string>
+   </property>
+  </action>
+  <action name="actionNotification">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Notification on new Output(s)</string>
+   </property>
+  </action>
+  <action name="actionDefaultINI">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Add new Output(s) to default.ini</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

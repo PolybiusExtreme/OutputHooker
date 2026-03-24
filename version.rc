@@ -1,0 +1,27 @@
+IDI_ICON1 ICON "resources\\icon\\OutputHooker.ico"
+
+#include <windows.h>
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0" // 0409 = English (USA), 04b0 = Unicode (1200)
+        BEGIN
+            VALUE "CompanyName",      "PolybiusExtreme"
+            VALUE "FileDescription",  "Arcade Output Manager"
+            VALUE "FileVersion",      "1.0.0.0"
+            VALUE "InternalName",     "OutputHooker"
+            VALUE "LegalCopyright",   "Copyright (c) 2026 PolybiusExtreme"
+            VALUE "OriginalFilename", "OutputHooker.exe"
+            VALUE "ProductName",      "OutputHooker"
+            VALUE "ProductVersion",   "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200 // 0x409 = English (USA), 1200 = Unicode
+    END
+END
