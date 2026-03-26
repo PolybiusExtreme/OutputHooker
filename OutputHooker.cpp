@@ -105,6 +105,7 @@ OutputHooker::OutputHooker(QWidget *parent)
     connect(p_core, &OutputHookerCore::connectionStatus, this, &OutputHooker::updateConnectionStatus);
     connect(p_core, &OutputHookerCore::showErrorMessage, this, &OutputHooker::errorMessage);
 
+    // Start OutputHookerCore
     p_core->startCore();
     coreRunning = true;
 }

@@ -6,12 +6,19 @@ PacDriveModule::PacDriveModule(QObject *parent)
     // Initialize Ultimarc controllers
     numberUltimarcDevices = PacInitialize();
 
+    // Collect Ultimarc data
     collectUltimarcData();
+
+    // Turn the lights on all boards off
+    turnLightsOnAllBoardsOff();
 }
 
 PacDriveModule::~PacDriveModule()
 {
-    // Shut down Ultimarc controller
+    // Turn the lights on all boards off
+    turnLightsOnAllBoardsOff();
+
+    // Shut down Ultimarc controllers
     PacShutdown();
 }
 
@@ -20,22 +27,17 @@ void PacDriveModule::collectUltimarcData()
 {
     if (numberUltimarcDevices > 0)
     {
-        // Variables
         quint8 i, j;
-        quint8 index = 0;
         PWCHAR buffer = new wchar_t[256];
         numberUltimarcDevicesValid = 0;
 
         for (i = 0; i < numberUltimarcDevices; i++)
         {
             bool invalid = false;
-
             quint8 type = PacGetDeviceType(i);
 
             if (type >= PACDRIVE && type <= IPACULTIMATEIO)
             {
-                // 2 IDs used, first is postition in list, second is what is programmed to
-                // The position in the list ID is the important one
                 dataUltimarc[i].id = i;
 
                 dataUltimarc[i].type = type;
@@ -94,28 +96,47 @@ void PacDriveModule::collectUltimarcData()
                 if (dataUltimarc[i].deviceID > 7)
                     invalid = true;
 
-                // Get number of pins
-                numberPins.insert (i,ULTIMARCTYPELEDCOUNT[dataUltimarc[i].type]);
+                numberPins.insert(i, ULTIMARCTYPELEDCOUNT[dataUltimarc[i].type]);
+                int pins = numberPins[i];
 
-                // Set pins state and intensity to 0, for a known state and intensity
                 QList<bool> states;
                 QList<quint8> intensity;
 
-                for (j = 0; j < numberPins[i]; j++)
+                for (j = 0; j < pins; j++)
                 {
-                    states << true;
+                    states << false;
                     intensity << 0;
                 }
 
-                lightStateMap.insert(i,states);
-                lightIntensityMap.insert(i,intensity);
+                lightStateMap.insert(i, states);
+                lightIntensityMap.insert(i, intensity);
 
                 if (type == IPACULTIMATEIO)
+                {
                     numberGroups.insert(i, ULTIMATEGRPS);
+                }
                 else if (type == NANOLED || type == PACLED64)
+                {
                     numberGroups.insert(i, OTHERGRPS);
+                }
                 else
+                {
                     numberGroups.insert(i, SMALLGROUPS);
+                }
+
+                if (type == IPACULTIMATEIO || type == PACLED64 || type == NANOLED)
+                {
+                    Pac64SetLEDFadeTime(i, 0);
+
+                    int numGroupsToInit = numberGroups[i];
+                    for (int g = 1; g <= numGroupsToInit; g++)
+                    {
+                        Pac64SetLEDStates(i, g, 0xFF);
+                    }
+
+                    BYTE initialIntensities[96] = {0};
+                    Pac64SetLEDIntensities(i, initialIntensities);
+                }
 
                 QList<quint8> stateData;
 
@@ -134,11 +155,7 @@ void PacDriveModule::collectUltimarcData()
                     dataUltimarc[i].valid = true;
                     numberUltimarcDevicesValid++;
                 }
-
-                index++;
             }
-            else
-                dataUltimarc[i].valid = false;
         }
         delete[] buffer;
     }
@@ -149,25 +166,45 @@ void PacDriveModule::setPinState(quint8 id, quint8 pin, bool state)
 {
     if (id < numberUltimarcDevices && dataUltimarc[id].valid)
     {
+        if (pin >= numberPins[id])
+            return;
+
         if (dataUltimarc[id].pins[pin] != state)
         {
-            dataUltimarc[id].pins[pin] = state;
+            bool writePass = false;
 
             if (dataUltimarc[id].type >= NANOLED && dataUltimarc[id].type <= IPACULTIMATEIO)
             {
                 BYTE intensity = state ? 255 : 0;
+                quint8 writeCount = 0;
 
-                Pac64SetLEDIntensity(id, pin, intensity);
+                do
+                {
+                    writePass = Pac64SetLEDIntensity(id, pin, intensity);
+                    writeCount++;
+                }
+                while (!writePass && writeCount < WRITERETRYATTEMPTS + 1);
             }
             else if (dataUltimarc[id].type >= PACDRIVE && dataUltimarc[id].type <= BLUEHID)
             {
-                PacSetLEDState(id, pin, state);
+                writePass = PacSetLEDState(id, pin, state);
+            }
+
+            if (writePass)
+            {
+                dataUltimarc[id].pins[pin] = state;
+                lightIntensityMap[id][pin] = state ? 255 : 0;
+            }
+            else
+            {
+                QString errorMsg = "Write to Ultimarc Controller with ID " + QString::number(id + 1) + " failed after 3 write attempts!";
+                emit showErrorMessage("Write to Ultimarc Controller failed!", errorMsg);
             }
         }
     }
     else
     {
-        QString errorMsg = "ID " + QString::number(id) + " is not in the valid Ultimarc controller list!";
+        QString errorMsg = "ID " + QString::number(id + 1) + " is not in the valid Ultimarc controller list!";
         emit showErrorMessage("Invalid Ultimarc Controller ID!", errorMsg);
     }
 }
@@ -177,67 +214,84 @@ void PacDriveModule::setLightIntensity(quint8 id, quint8 pin, quint8 intensity)
 {
     if (id < numberUltimarcDevices && dataUltimarc[id].valid)
     {
-        if (dataUltimarc[id].intensities[pin] != intensity)
+        if (pin >= numberPins[id])
+            return;
+
+        if (lightIntensityMap[id][pin] != intensity)
         {
-            dataUltimarc[id].intensities[pin] = intensity;
+            bool writePass = false;
+            quint8 writeCount = 0;
 
-            if (dataUltimarc[id].type >= NANOLED && dataUltimarc[id].type <= IPACULTIMATEIO)
+            do
             {
-                Pac64SetLEDIntensity(id, pin, (BYTE)intensity);
+                writePass = Pac64SetLEDIntensity(id, pin, intensity);
+                writeCount++;
+            }
+            while (!writePass && writeCount < WRITERETRYATTEMPTS + 1);
 
+            if (writePass)
+            {
+                lightIntensityMap[id][pin] = intensity;
                 dataUltimarc[id].pins[pin] = (intensity > 0);
+            }
+            else
+            {
+                QString errorMsg = "Write to Ultimarc Controller with ID " + QString::number(id + 1) + " failed after 3 write attempts!";
+                emit showErrorMessage("Write to Ultimarc Controller failed!", errorMsg);
             }
         }
     }
     else
     {
-        QString errorMsg = "ID " + QString::number(id) + " is not in the valid Ultimarc controller list!";
+        QString errorMsg = "ID " + QString::number(id + 1) + " is not in the valid Ultimarc controller list!";
         emit showErrorMessage("Invalid Ultimarc Controller ID!", errorMsg);
     }
 }
 
-// Turn all lights off
+// Turn all lights on one board off
 void PacDriveModule::turnAllLightsOff(quint8 id)
 {
-    if (dataUltimarc[id].valid)
+    if (id < numberUltimarcDevices && dataUltimarc[id].valid)
     {
-        quint8 i, pins;
-
-        pins = numberPins[id];
+        int pins = numberPins[id];
 
         if (dataUltimarc[id].type >= NANOLED && dataUltimarc[id].type <= IPACULTIMATEIO)
         {
-            PBYTE intensityData = new BYTE[pins];
+            BYTE intensityData[96] = {0};
 
-            for (i = 0; i < pins; i++)
-                intensityData[i] = 0;
-
-            // Turn states on
-            for (i = 0; i < numberGroups[id]; i++)
+            if (Pac64SetLEDIntensities(id, intensityData))
             {
-                if (i == 7 && dataUltimarc[id].type == NANOLED)
-                    Pac64SetLEDStates(id, i+1, 0x0F);
-                else
-                    Pac64SetLEDStates(id, i+1, 0xFF);
+                for (int i = 0; i < pins; i++)
+                {
+                    lightIntensityMap[id][i] = 0;
+                    dataUltimarc[id].pins[i] = false;
+                }
             }
-
-            // Turn intensity for all pins off
-            Pac64SetLEDIntensities(id,intensityData);
-
-            delete[] intensityData;
         }
         else if (dataUltimarc[id].type >= PACDRIVE && dataUltimarc[id].type <= BLUEHID)
         {
-            // Turn off the 16 states
             PacSetLEDStates(id, 0);
 
-            groupStateData[id][0] = 0;
-            groupStateData[id][1] = 0;
+            for (int i = 0; i < pins; i++) {
+                dataUltimarc[id].pins[i] = false;
+            }
         }
     }
     else
     {
-        QString errorMsg = "ID " + QString::number(id + 1) + " was not found in the valid Ultimarc controller list!";
+        QString errorMsg = "ID " + QString::number(id + 1) + " is not in the valid Ultimarc controller list!";
         emit showErrorMessage("Invalid Ultimarc Controller ID!", errorMsg);
+    }
+}
+
+// Turn the lights on all boards off
+void PacDriveModule::turnLightsOnAllBoardsOff()
+{
+    for (quint8 i = 0; i < numberUltimarcDevices; i++)
+    {
+        if (dataUltimarc[i].valid)
+        {
+            turnAllLightsOff(i);
+        }
     }
 }

@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QSharedMemory>
 #include <QSystemSemaphore>
+#include <QStyleFactory>
 
 int main(int argc, char *argv[])
 {
@@ -29,8 +30,9 @@ int main(int argc, char *argv[])
 
     if(!isRunning)
     {
-    OutputHooker w;
-    return a.exec();
+        QApplication::setStyle(QStyleFactory::create("Fusion"));
+        OutputHooker w;
+        return a.exec();
     }
     else
     {

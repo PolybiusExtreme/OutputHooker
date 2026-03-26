@@ -33,6 +33,15 @@ TestOutputWindow::TestOutputWindow(QWidget *parent)
     ui->cbFunction->addItem("Ultimarc - Kill All LEDs",     CmdUltimarcKill);
     ui->cbFunction->addItem("Play WAV Audio File",          CmdPlayWav);
 
+    ui->cbFunction->setStyleSheet("QComboBox { combobox-popup: 0; }");
+    ui->cbFunction->view()->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    ui->cbParameter1->setStyleSheet("QComboBox { combobox-popup: 0; }");
+    ui->cbParameter1->view()->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    ui->cbParameter2->setStyleSheet("QComboBox { combobox-popup: 0; }");
+    ui->cbParameter2->view()->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    ui->cbParameter3->setStyleSheet("QComboBox { combobox-popup: 0; }");
+    ui->cbParameter3->view()->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+
     setParamLabelVisibility(false, false, false);
     setParamComboBoxVisibility(false, false, false);
     setParamLineEditVisibility(false, false, false);

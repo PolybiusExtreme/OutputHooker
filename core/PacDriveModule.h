@@ -30,7 +30,7 @@ public slots:
     // Set light intensity
     void setLightIntensity(quint8 id, quint8 pin, quint8 intensity);
 
-    // Turn all lights off
+    // Turn all lights on one board off
     void turnAllLightsOff(quint8 id);
 
 signals:
@@ -61,6 +61,10 @@ public:
 
     // Group state data
     QMap<quint8,QList<quint8>> groupStateData;
+
+private:
+    // Turn the lights on all boards off
+    void turnLightsOnAllBoardsOff();
 };
 
 #endif // PACDRIVEMODULE_H

@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QFile>
 #include <QIntValidator>
+#include <QAbstractItemView>
 
 #include "../Global.h"
 
