@@ -40,13 +40,18 @@ OutputHooker::OutputHooker(QWidget *parent)
     // Set Tray Icon and show it
     trayIcon = new QSystemTrayIcon(this);
     trayIcon->setIcon(QIcon(":/icon/OutputHooker.ico"));
+    trayIcon->setToolTip("OutputHooker");
     trayIcon->show();
 
     // Set Tray Icon menu
     trayIconMenu = new QMenu(this);
     restoreAction = new QAction("OutputHooker", this);
     // restoreAction->setIcon(QIcon(":/icon/OutputHooker.ico"));
-    connect(restoreAction, &QAction::triggered, this, &QWidget::show);
+    connect(restoreAction, &QAction::triggered, this, [this](){
+        this->show();
+        this->setWindowState(Qt::WindowActive);
+        p_core->mainWindowState(false);
+    });
     trayIconMenu->addAction(restoreAction);
     trayIconMenu->addSeparator();
     testOutputAction = new QAction("Test Outputs", this);
