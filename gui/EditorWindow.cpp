@@ -4,6 +4,7 @@
 #include "GuiUtilities.h"
 #include "SyntaxHighlighter.h"
 #include "EditorAddCmdWindow.h"
+#include "EditorAddKeyStateWindow.h"
 
 EditorWindow::EditorWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -207,9 +208,18 @@ void EditorWindow::on_actionCommand_triggered()
     {
         FunctionCommand res = diag.getCommand();
         QString finalString;
+        QStringList parts;
 
         switch(res.type)
         {
+        case CmdAppLaunch:
+            if (!res.commandCode.isEmpty()) parts << res.commandCode;
+            if (!res.param1.isEmpty())      parts << res.param1;
+            if (!res.param2.isEmpty())      parts << res.param2;
+            if (!res.param3.isEmpty())      parts << res.param3;
+            finalString = parts.join(" ");
+            break;
+
         case CmdUltimarcIntensity:
         case CmdUltimarcState:
             // [Command] [Parameter1] [Parameter2] [Parameter3]
@@ -240,6 +250,7 @@ void EditorWindow::on_actionCommand_triggered()
 
         case CmdComClose:
         case CmdUltimarcKill:
+        case CmdAppClose:
         case CmdPlayWav:
             // [Command] [Parameter1]
             finalString = QString("%1 %2").arg(res.commandCode, res.param1);
@@ -285,6 +296,60 @@ void EditorWindow::on_actionStateBreak_triggered()
     cursor.insertText("|");
 
     ui->textEdit->setFocus();
+}
+
+// Menu entry - Add - Key State
+void EditorWindow::on_actionKeyState_triggered()
+{
+    EditorAddKeyStateWindow diag(this);
+
+    if (diag.exec() == QDialog::Accepted)
+    {
+        QString key = diag.getSelectedKey();
+
+        if (key.isEmpty())
+            return;
+
+        QString text = ui->textEdit->toPlainText();
+        QString searchString = "[KeyStates]";
+
+        // Find the position after the header
+        int headerPos = text.indexOf(searchString);
+        int searchStart = headerPos + searchString.length();
+
+        // Search for the next section starting from the header
+        int nextSection = text.indexOf("[", searchStart);
+
+        QTextCursor cursor = ui->textEdit->textCursor();
+
+        if (nextSection != -1)
+        {
+            // If another section follows, insert before it
+            cursor.setPosition(nextSection);
+            // Insert the key and then add a line break
+            cursor.insertText(key + "=\n");
+            // Move the cursor one line up to the end of the key for direct input
+            cursor.movePosition(QTextCursor::Up);
+            cursor.movePosition(QTextCursor::EndOfLine);
+        }
+        else
+        {
+            // If [KeyStates] is the last section, insert at the end of the file
+            cursor.movePosition(QTextCursor::End);
+
+            // If the file does not end with a line break, add one
+            if (!text.endsWith("\n") && !text.isEmpty())
+            {
+                cursor.insertText("\n");
+            }
+
+            cursor.insertText(key + "=");
+        }
+
+        // Make changes visible in the UI and set focus
+        ui->textEdit->setTextCursor(cursor);
+        ui->textEdit->setFocus();
+    }
 }
 
 // If text is changed and file or editor should be closed

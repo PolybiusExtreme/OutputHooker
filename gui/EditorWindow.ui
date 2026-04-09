@@ -70,6 +70,7 @@
     <addaction name="actionCommandBreak"/>
     <addaction name="actionCommandState"/>
     <addaction name="actionStateBreak"/>
+    <addaction name="actionKeyState"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -211,6 +212,11 @@
    </property>
    <property name="toolTip">
     <string>Command State</string>
+   </property>
+  </action>
+  <action name="actionKeyState">
+   <property name="text">
+    <string>Key State</string>
    </property>
   </action>
  </widget>

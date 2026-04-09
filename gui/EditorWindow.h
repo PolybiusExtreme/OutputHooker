@@ -54,6 +54,9 @@ private slots:
     // Menu entry - Add - State Break
     void on_actionStateBreak_triggered();
 
+    // Menu entry - Add - Key State
+    void on_actionKeyState_triggered();
+
 private:
     Ui::EditorWindow *ui;
 
