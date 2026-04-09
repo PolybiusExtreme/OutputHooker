@@ -51,7 +51,6 @@ For the hardware side, I’ve integrated the Ultimarc PacDrive SDK for the LED b
 
 ## ToDo
 - Add LedWiz support
-- Add KeyStates support
 - Add support for display files
 
 ## Credits
