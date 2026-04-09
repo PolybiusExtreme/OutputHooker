@@ -169,6 +169,11 @@ OutputHookerCore::OutputHookerCore(OutputHookerConfig *ohConfig, QObject *parent
         threadForLight.start(QThread::HighPriority);
     }
 
+    // KeyStates timer
+    keyStatesRefreshTime = 33;
+    keyStateTimer = new QTimer(this);
+    connect(keyStateTimer, &QTimer::timeout, this, &OutputHookerCore::checkKeyStates);
+
     // Load settings
     loadSettingsFromList();
 }
@@ -261,84 +266,110 @@ void OutputHookerCore::setWinID(HWND handle)
 // Execute command from TestOutputWindow
 void OutputHookerCore::executeCommand(const FunctionCommand &cmd)
 {
-    // COM port open command
-    if (cmd.commandCode == COMPORTOPEN || cmd.commandCode == COMPORTSETTINGS)
+    // COM port commands, starts with "cm" or "cs"
+    if (cmd.commandCode.startsWith(PORTCMDSTART1, Qt::CaseInsensitive) == true || cmd.commandCode.startsWith(PORTCMDSTART2, Qt::CaseInsensitive) == true)
     {
-        quint8 comPortNumber = cmd.param1.toUInt();
-        ComPortStruct portTemp;
-
-        // Split the Settings into 4 strings = 1: Baud  2: Parity  3: Data  4: Stop
-        QStringList temp = cmd.param2.split('_', Qt::SkipEmptyParts);
-
-        if (temp.size() >= 4)
+        // COM port open command
+        if (cmd.commandCode.startsWith(COMPORTOPEN, Qt::CaseInsensitive) || cmd.commandCode.startsWith(COMPORTSETTINGS, Qt::CaseInsensitive))
         {
-            temp[0].remove(BAUDREMOVE);
-            temp[1].remove(PARITYREMOVE);
-            temp[2].remove(DATAREMOVE);
-            temp[3].remove(STOPREMOVE);
+            quint8 comPortNumber = cmd.param1.toUInt();
+            ComPortStruct portTemp;
 
-            portTemp.baud = temp[0].toUInt();
+            // Split the Settings into 4 strings = 1: Baud  2: Parity  3: Data  4: Stop
+            QStringList temp = cmd.param2.split('_', Qt::SkipEmptyParts);
 
-            if (temp[1] == "N")
-                portTemp.parity = 0;
-            else if (temp[1] == "E")
-                portTemp.parity = 2;
-            else if (temp[1] == "O")
-                portTemp.parity = 3;
-            else if (temp[1] == "S")
-                portTemp.parity = 4;
-            else if (temp[1] == "M")
-                portTemp.parity = 5;
-            else
-                portTemp.parity = 1;
+            if (temp.size() >= 4)
+            {
+                temp[0].remove(BAUDREMOVE);
+                temp[1].remove(PARITYREMOVE);
+                temp[2].remove(DATAREMOVE);
+                temp[3].remove(STOPREMOVE);
 
-            portTemp.data = temp[2].toUInt();
+                portTemp.baud = temp[0].toUInt();
 
-            if (temp[3] == "1.5")
-                temp[3] = "3";
+                if (temp[1] == "N")
+                    portTemp.parity = 0;
+                else if (temp[1] == "E")
+                    portTemp.parity = 2;
+                else if (temp[1] == "O")
+                    portTemp.parity = 3;
+                else if (temp[1] == "S")
+                    portTemp.parity = 4;
+                else if (temp[1] == "M")
+                    portTemp.parity = 5;
+                else
+                    portTemp.parity = 1;
 
-            portTemp.stop = temp[3].toUInt();
+                portTemp.data = temp[2].toUInt();
 
-            comPortMap.insert(comPortNumber,portTemp);
-            comPortOpen(comPortNumber);
+                if (temp[3] == "1.5")
+                    temp[3] = "3";
+
+                portTemp.stop = temp[3].toUInt();
+
+                comPortMap.insert(comPortNumber,portTemp);
+                comPortOpen(comPortNumber);
+            }
+        }
+        // COM port close command
+        else if (cmd.commandCode.startsWith(COMPORTCLOSE, Qt::CaseInsensitive))
+        {
+            quint8 comPortNumber = cmd.param1.toUInt();
+            comPortClose(comPortNumber);
+        }
+        // COM port write command
+        else if (cmd.commandCode.startsWith(COMPORTWRITE, Qt::CaseInsensitive))
+        {
+            quint8 comPortNumber = cmd.param1.toUInt();
+            comPortWrite(comPortNumber, cmd.param2);
         }
     }
-    // COM port close command
-    else if (cmd.commandCode == COMPORTCLOSE)
+    // PacDrive commands, starts with "ul"
+    else if (cmd.commandCode.startsWith(PACCMDSTART, Qt::CaseInsensitive) == true)
     {
-        quint8 comPortNumber = cmd.param1.toUInt();
-        comPortClose(comPortNumber);
+        // PacDrive set pin state command
+        if (cmd.commandCode.startsWith(PACSETSTATE, Qt::CaseInsensitive))
+        {
+            quint8 pacID = cmd.param1.toUInt() - 1;
+            quint8 pacPin = cmd.param2.toUInt() - 1;
+            bool pacState = (cmd.param3.toUInt() > 0);
+            setPacDrivePinState(pacID, pacPin, pacState);
+        }
+        // PacDrive set light intensity command
+        else if (cmd.commandCode.startsWith(PACSETINTENSITY, Qt::CaseInsensitive))
+        {
+            quint8 pacID = cmd.param1.toUInt() - 1;
+            quint8 pacPin = cmd.param2.toUInt() - 1;
+            quint8 pacIntensity = cmd.param3.toUInt();
+            setPacDriveLightIntensity(pacID, pacPin, pacIntensity);
+        }
+        // PacDrive kill all LEDs command
+        else if (cmd.commandCode.startsWith(PACKILLALLLEDS, Qt::CaseInsensitive))
+        {
+            quint8 pacID = cmd.param1.toUInt() - 1;
+            turnAllPacDriveLightsOff(pacID);
+        }
     }
-    // COM port write command
-    else if (cmd.commandCode == COMPORTWRITE)
+    // Launch and Close Application commands, starts with "ap"
+    else if (cmd.commandCode.startsWith(APPCMDSTART, Qt::CaseInsensitive) == true)
     {
-        quint8 comPortNumber = cmd.param1.toUInt();
-        comPortWrite(comPortNumber, cmd.param2);
-    }
-    // PacDrive set pin state command
-    else if (cmd.commandCode == PACSETSTATE)
-    {
-        quint8 pacID = cmd.param1.toUInt() - 1;
-        quint8 pacPin = cmd.param2.toUInt() - 1;
-        bool pacState = (cmd.param3.toUInt() > 0);
-        setPacDrivePinState(pacID, pacPin, pacState);
-    }
-    // PacDrive set light intensity command
-    else if (cmd.commandCode == PACSETINTENSITY)
-    {
-        quint8 pacID = cmd.param1.toUInt() - 1;
-        quint8 pacPin = cmd.param2.toUInt() - 1;
-        quint8 pacIntensity = cmd.param3.toUInt();
-        setPacDriveLightIntensity(pacID, pacPin, pacIntensity);
-    }
-    // PacDrive kill all LEDs command
-    else if (cmd.commandCode == PACKILLALLLEDS)
-    {
-        quint8 pacID = cmd.param1.toUInt() - 1;
-        turnAllPacDriveLightsOff(pacID);
+        // Launch Application command
+        if (cmd.commandCode.startsWith(APPLAUNCH, Qt::CaseInsensitive))
+        {
+            QString executable = cmd.param1;
+            QString parameter = cmd.param2;
+            quint8 mode = cmd.param3.toUInt();
+            launchApplication(executable, parameter, mode);
+        }
+        // Close Application command
+        else if (cmd.commandCode.startsWith(APPCLOSE, Qt::CaseInsensitive))
+        {
+            QString executable = cmd.param1;
+            closeApplication(executable);
+        }
     }
     // Play WAV audio file command
-    else if (cmd.commandCode == PLAYWAVAUDIO)
+    else if (cmd.commandCode.startsWith(PLAYWAVAUDIO, Qt::CaseInsensitive))
     {
         QString file = cmd.param1;
         playWavAudioFile(file);
@@ -389,6 +420,29 @@ void OutputHookerCore::tcpDisconnected()
 
     if (!p_tcpSocket->isConnected && !p_tcpSocket->isConnecting)
         emit startTCPSocket();
+}
+
+// Check KeyStates
+void OutputHookerCore::checkKeyStates()
+{
+    QMapIterator<int, QStringList> i(keyStatesAndCommands);
+    while (i.hasNext())
+    {
+        i.next();
+
+        if (GetAsyncKeyState(i.key()) & 0x8000) {
+            if (!lastKeyStates[i.key()])
+            {
+                // Execute commands. Pass "1" as the value for %s%
+                executeINICommands(i.value(), "1");
+                lastKeyStates[i.key()] = true;
+            }
+        }
+        else
+        {
+            lastKeyStates[i.key()] = false;
+        }
+    }
 }
 
 // Process data
@@ -569,6 +623,8 @@ void OutputHookerCore::gameStopped()
     statesNoCommands.clear();
     signalsAndData.clear();
     statesAndData.clear();
+    keyStatesAndCommands.clear();
+    lastKeyStates.clear();
     iniFileLoaded = false;
     gameHasStopped = true;
 
@@ -653,13 +709,13 @@ bool OutputHookerCore::isDefaultINIFile()
 void OutputHookerCore::loadINIFile()
 {
     QString line;
-    QString signal;
+    QString key;
     QString commands;
     QStringList tempSplit;
-    quint16 indexEqual;
-    bool isOutput = false;
-    bool goodCommand;
     quint16 lineNumber = 0;
+    int indexEqual;
+    bool isOutput = false;
+    bool isKeyStates = false;
 
     iniFileLoadFail = false;
     openComPortCheck.clear();
@@ -669,11 +725,9 @@ void OutputHookerCore::loadINIFile()
     // Set write permission to iniFile
     iniFile.setPermissions(iniFile.permissions() | QFile::WriteOwner);
 
-    bool openFile = iniFile.open(QIODeviceBase::ReadOnly | QIODevice::Text);
-    if (!openFile)
+    if (!iniFile.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        QString errorMsg = "Could not open " + gameName + ENDOFINIFILE + "!";
-        emit showErrorMessage("Error", errorMsg);
+        emit showErrorMessage("Error", "Could not open " + gameName + ENDOFINIFILE + "!");
         return;
     }
 
@@ -683,91 +737,109 @@ void OutputHookerCore::loadINIFile()
     while (!in.atEnd())
     {
         // Get a line of data from file
-        line = in.readLine();
+        line = in.readLine().trimmed();
         lineNumber++;
 
+        if (line.isEmpty() || line.startsWith(";")) continue;
+
         // All lines have an '=', except for the one with '[' and ']'
-        if (!line.startsWith("["))
+        if (line.startsWith("["))
         {
-            // Get the index of the equal
-            indexEqual = line.indexOf('=',0);
-
-            // If there is nothing after '=', put in no commands list
-            // If something is after '=' then split it up into signals and command(s)
-            if (line.length() != indexEqual+1)
+            if (line.contains(SIGNALSTATE, Qt::CaseInsensitive))
             {
-                if (line[indexEqual-1] == ' ')
-                    signal = line.first(indexEqual-1);
-                else
-                    signal = line.first(indexEqual);
+                isOutput = true;
+                isKeyStates = false;
+            }
+            else if (line.contains(KEYSTATE, Qt::CaseInsensitive))
+            {
+                isKeyStates = true;
+                isOutput = false;
+            }
+            else
+            {
+                isOutput = false;
+                isKeyStates = false;
+            }
+            continue;
+        }
 
-                if (line[indexEqual+1] == ' ')
-                    commands = line.sliced(indexEqual+2);
-                else
-                    commands = line.sliced(indexEqual+1);
+        // Get the index of the equal
+        indexEqual = line.indexOf('=');
 
+        if (indexEqual != -1)
+        {
+            key = line.left(indexEqual).trimmed();
+            commands = line.mid(indexEqual + 1).trimmed();
+
+            if (!commands.isEmpty())
+            {
                 commands.replace(", ", ",");
                 commands.replace(" ,", ",");
-
                 tempSplit = commands.split(',', Qt::SkipEmptyParts);
 
-                if (!isOutput)
+                // Process RefreshTime value immediately and do not check it in checkINICommands
+                if (isKeyStates && key.compare("RefreshTime", Qt::CaseInsensitive) == 0)
                 {
-                    if (signal.startsWith("On"))
-                        signal.remove(0,2);
-
-                    if (signal.startsWith(JUSTMAME, Qt::CaseInsensitive))
-                        signal.insert(4,'_');
-
-                    signal = signal.toLower();
+                    keyStatesRefreshTime = commands.toInt();
+                    continue;
                 }
 
-                goodCommand = checkINICommands(tempSplit, lineNumber, gameINIFilePath);
-
-                // If bad command file, then fail load
-                if (!goodCommand)
+                // Syntax check of the commands
+                if (!checkINICommands(tempSplit, lineNumber, gameINIFilePath))
                 {
                     iniFileLoadFail = true;
                     iniFile.close();
                     return;
                 }
 
-                if (isOutput)
+                if (isKeyStates)
                 {
-                    signalsAndCommands.insert(signal, tempSplit);
+                    // Convert the key name to virtual key code
+                    int vkCode = mapKeyNameToCode(key);
+                    if (vkCode > 0)
+                    {
+                        keyStatesAndCommands.insert(vkCode, tempSplit);
+                        lastKeyStates.insert(vkCode, false);
+                    }
+                }
+                else if (isOutput)
+                {
+                    // Normal game outputs (save in lowercase)
+                    signalsAndCommands.insert(key.toLower(), tempSplit);
                 }
                 else
                 {
-                    static const QStringList generalKey = {MAMESTART, MAMESTOP, STATECHANGE, ROTATE, PAUSE};
+                    // General/States (mame_start, pause, etc.)
+                    QString signal = key.toLower();
 
-                    if (generalKey.contains(signal))
-                    {
-                        stateAndCommands.insert(signal, tempSplit);
-                    }
+                    // Correction logic for general keys
+                    if (signal.startsWith("on"))
+                        signal.remove(0, 2);
+                    if (signal.startsWith("mame") && !signal.contains("_"))
+                        signal.insert(4, '_');
+
+                    stateAndCommands.insert(signal, tempSplit);
                 }
             }
             else
             {
-                line.chop(1);
-                if (isOutput)
-                    signalsNoCommands << line;
-                else
-                    statesNoCommands << line;
+                // Mark entries without commands for automatic completion
+                if (isOutput) signalsNoCommands << key;
+                else if (!isKeyStates) statesNoCommands << key;
             }
-        }
-        else
-        {
-            // This is the lines with the '[' and ']'
-            if (line.contains(SIGNALSTATE, Qt::CaseInsensitive))
-                isOutput = true;
-            else
-                isOutput = false;
         }
     }
 
     // Close file
     iniFile.close();
     iniFileLoaded = true;
+
+    // Timer logic for KeyStates
+    if (!keyStatesAndCommands.isEmpty())
+    {
+        int interval = (keyStatesRefreshTime < 10) ? 100 : keyStatesRefreshTime;
+        keyStateTimer->start(interval);
+    }
 
     // Bypass the COM port connection fail warning pop-up, as MAMEHooker does
     emit setBypassComPortConnectFailWarning(true);
@@ -1199,6 +1271,48 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
             return true;
         }
     }
+    // Launch and Close Application commands, starts with "ap"
+    else if (commandNotChk.startsWith(APPCMDSTART, Qt::CaseInsensitive) == true)
+    {
+        QStringList args = QProcess::splitCommand(commandNotChk);
+
+        // Launch Application command
+        if (commandNotChk.startsWith(APPLAUNCH, Qt::CaseInsensitive))
+        {
+            if (args.size() < 2)
+            {
+                QString errorMsg = "Command requires at least 1 parameter (Path & Executable)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("Launch Application - Error", errorMsg);
+                return false;
+            }
+
+            QString executableFilePath = args[1];
+            executableFilePath.remove('"');
+
+            if (!QFile::exists(executableFilePath))
+            {
+                QString errorMsg = executableFilePath + " not found!\nLine Number: " + QString::number(lineNumber);
+                emit showErrorMessage("Launch Application - Error", errorMsg);
+                return false;
+            }
+
+            // Good command
+            return true;
+        }
+        // Close Application command
+        else if (commandNotChk.startsWith(APPCLOSE, Qt::CaseInsensitive))
+        {
+            if (args.size() < 2)
+            {
+                QString errorMsg = "Command requires 1 parameter (Executable)!\nLine Number: " + QString::number(lineNumber);
+                emit showErrorMessage("Close Application - Error", errorMsg);
+                return false;
+            }
+
+            //Good command
+            return true;
+        }
+    }
     // Play WAV audio file command
     else if (commandNotChk.startsWith(PLAYWAVAUDIO, Qt::CaseInsensitive))
     {
@@ -1239,63 +1353,176 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
     return false;
 }
 
+// Map key name to virtual key code
+int OutputHookerCore::mapKeyNameToCode(const QString &name)
+{
+    QString n = name.toUpper().trimmed();
+
+    // Mouse & System
+    if (n == "LBUTTON" || n == "Left mouse button") return 0x01;
+    if (n == "RBUTTON" || n == "Right mouse button") return 0x02;
+    if (n == "CANCEL") return 0x03;
+    if (n == "MBUTTON" || n == "Middle mouse button") return 0x04;
+
+    // Edit keys
+    if (n == "BACK") return 0x08;
+    if (n == "TAB") return 0x09;
+    if (n == "CLEAR") return 0x0C;
+    if (n == "RETURN") return 0x0D;
+    if (n == "PAUSE") return 0x13;
+    if (n == "CAPSLOCK") return 0x14;
+    if (n == "ESCAPE") return 0x1B;
+    if (n == "SPACE") return 0x20;
+
+    // Navigation
+    if (n == "PAGE UP") return 0x21;
+    if (n == "PAGE DOWN") return 0x22;
+    if (n == "END") return 0x23;
+    if (n == "HOME") return 0x24;
+    if (n == "LEFT") return 0x25;
+    if (n == "UP") return 0x26;
+    if (n == "RIGHT") return 0x27;
+    if (n == "DOWN") return 0x28;
+    if (n == "SELECT") return 0x29;
+    if (n == "PRINT SCREEN") return 0x2C;
+    if (n == "EXECUTE") return 0x2D;
+    if (n == "SNAPSHOT") return 0x2C;
+    if (n == "INSERT") return 0x2D;
+    if (n == "DELETE") return 0x2E;
+    if (n == "HELP") return 0x2F;
+
+    // Modifiers
+    if (n == "LSHIFT") return 0xA0;
+    if (n == "RSHIFT") return 0xA1;
+    if (n == "LCONTROL") return 0xA2;
+    if (n == "RCONTROL") return 0xA3;
+    if (n == "LALT") return 0xA4;
+    if (n == "RALT") return 0xA5;
+
+    // Letters A-Z (ASCII values ​​correspond to VK codes)
+    if (n.length() == 1 && n[0] >= 'A' && n[0] <= 'Z') {
+        return (int)n[0].toLatin1();
+    }
+
+    // Numbers 0-9
+    if (n.length() == 1 && n[0] >= '0' && n[0] <= '9') {
+        return (int)n[0].toLatin1();
+    }
+
+    // Numpad
+    if (n == "NUMPAD0") return 0x60;
+    if (n == "NUMPAD1") return 0x61;
+    if (n == "NUMPAD2") return 0x62;
+    if (n == "NUMPAD3") return 0x63;
+    if (n == "NUMPAD4") return 0x64;
+    if (n == "NUMPAD5") return 0x65;
+    if (n == "NUMPAD6") return 0x66;
+    if (n == "NUMPAD7") return 0x67;
+    if (n == "NUMPAD8") return 0x68;
+    if (n == "NUMPAD9") return 0x69;
+    if (n == "MULTIPLY") return 0x6A;
+    if (n == "ADD") return 0x6B;
+    if (n == "NUMPADENTER") return 0x0D;
+    if (n == "SUBTRACT") return 0x6D;
+    if (n == "DECIMAL") return 0x6E;
+    if (n == "DIVIDE") return 0x6F;
+
+    // Function keys
+    if (n == "F1") return 0x70;
+    if (n == "F2") return 0x71;
+    if (n == "F3") return 0x72;
+    if (n == "F4") return 0x73;
+    if (n == "F5") return 0x74;
+    if (n == "F6") return 0x75;
+    if (n == "F7") return 0x76;
+    if (n == "F8") return 0x77;
+    if (n == "F9") return 0x78;
+    if (n == "F10") return 0x79;
+    if (n == "F11") return 0x7A;
+    if (n == "F12") return 0x7B;
+
+    // Special characters (OEM codes)
+    if (n == "NUMLOCK") return 0x90;
+    if (n == "SCROLLLOCK") return 0x91;
+    if (n == "`") return 0xC0;
+    if (n == "MINUS") return 0xBD;
+    if (n == "EQUALS") return 0xBB;
+    if (n == "LBRACKET") return 0xDB;
+    if (n == "RBRACKET") return 0xDD;
+    if (n == "BACKSLASH") return 0xDC;
+    if (n == "SEMICOLON") return 0xBA;
+    if (n == "APOSTROPHE") return 0xDE;
+    if (n == ",") return 0xBC;
+    if (n == "PERIOD" || n == ".") return 0xBE;
+    if (n == "SLASH" || n == "/") return 0xBF;
+
+    return 0; // Not found
+}
+
 // Process commands based on INI file
 void OutputHookerCore::processINICommands(QString signalName, QString value, bool isState)
 {
-    quint8 i;
+    QStringList commands;
+    QString searchName = signalName.toLower().trimmed();
+
+    if (isState) {
+        if (stateAndCommands.contains(searchName))
+            commands = stateAndCommands[searchName];
+    } else {
+        if (signalsAndCommands.contains(searchName))
+            commands = signalsAndCommands[searchName];
+    }
+
+    if (!commands.isEmpty()) {
+        executeINICommands(commands, value);
+    }
+}
+
+// Execute commands based on INI file
+void OutputHookerCore::executeINICommands(const QStringList &commands, const QString &value)
+{
+    QStringList cmd, settings;
     quint8 comPortNumber;
     ComPortStruct portTemp;
-    QStringList cmd, settings;
-    QStringList commands;
 
-    if (isState)
-        commands = stateAndCommands[signalName];
-    else
-        commands = signalsAndCommands[signalName];
-
-    for (i = 0; i < commands.size(); i++)
+    for (int i = 0; i < commands.size(); i++)
     {
-        // First, check if there are more values with '|', if so, split
-        if(commands[i].contains('|'))
+        QString currentCommand = commands[i];
+
+        // Branching logic with "|"
+        if (currentCommand.contains('|'))
         {
-            commands[i].replace(" |","|");
-            commands[i].replace("| ","|");
+            currentCommand.replace(" |", "|");
+            currentCommand.replace("| ", "|");
+            cmd = currentCommand.split('|', Qt::SkipEmptyParts);
 
-            cmd = commands[i].split('|', Qt::SkipEmptyParts);
-
-            // Pick the command to use, based on the value, as 0 starts on the right and increases to the left. If value is blank, then use 0
-            if (value != "")
+            if (!value.isEmpty())
             {
                 quint16 dataNum = value.toUInt();
-                // It is -1 since it starts at 0
                 qint16 mvSize = cmd.size() - 1;
-
-                // If value is larger than the number of commands, then pick the highest command
-                if(dataNum > mvSize)
-                    dataNum = mvSize;
-
-                commands[i] = cmd[dataNum];
+                if (dataNum > mvSize) dataNum = mvSize;
+                currentCommand = cmd[dataNum];
             }
             else
             {
-                commands[i] = cmd[0];
+                currentCommand = cmd[0];
             }
         }
 
-        // Second, check if there is the %s% variable. If so, replace with value
-        if (commands[i].contains(SIGNALDATAVARIABLE))
+        // Replace placeholder %s%
+        if (currentCommand.contains(SIGNALDATAVARIABLE))
         {
-            commands[i].replace(SIGNALDATAVARIABLE, value);
+            currentCommand.replace(SIGNALDATAVARIABLE, value);
         }
 
         // COM port commands, starts with "cm" or "cs"
-        if (commands[i].startsWith(PORTCMDSTART1, Qt::CaseInsensitive) == true || commands[i].startsWith(PORTCMDSTART2, Qt::CaseInsensitive) == true)
+        if (currentCommand.startsWith(PORTCMDSTART1, Qt::CaseInsensitive) || currentCommand.startsWith(PORTCMDSTART2, Qt::CaseInsensitive))
         {
             // COM port open command
-            if (commands[i].startsWith(COMPORTOPEN, Qt::CaseInsensitive) || commands[i].startsWith(COMPORTSETTINGS, Qt::CaseInsensitive))
+            if (currentCommand.startsWith(COMPORTOPEN, Qt::CaseInsensitive) || currentCommand.startsWith(COMPORTSETTINGS, Qt::CaseInsensitive))
             {
                 // This will give 3 strings = 1: cmo/css  2: Com Port #  3: Settings
-                cmd = commands[i].split(' ', Qt::SkipEmptyParts);
+                cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
 
                 comPortNumber = cmd[1].toUInt();
 
@@ -1332,20 +1559,20 @@ void OutputHookerCore::processINICommands(QString signalName, QString value, boo
                 comPortOpen(comPortNumber);
             }
             // COM port close command
-            else if (commands[i].startsWith(COMPORTCLOSE, Qt::CaseInsensitive))
+            else if (currentCommand.startsWith(COMPORTCLOSE, Qt::CaseInsensitive))
             {
                 // This will give 2 strings = 1: cmc  2: Com Port #
-                cmd = commands[i].split(' ', Qt::SkipEmptyParts);
+                cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
 
                 quint8 comPortNumber = cmd[1].toUInt();
 
                 comPortClose(comPortNumber);
             }
             // COM port write command
-            else if (commands[i].startsWith(COMPORTWRITE, Qt::CaseInsensitive))
+            else if (currentCommand.startsWith(COMPORTWRITE, Qt::CaseInsensitive))
             {
                 // This will give 3 strings = 1: cmw  2: Com Port #  3: Data
-                cmd = commands[i].split(' ', Qt::SkipEmptyParts);
+                cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
 
                 quint8 comPortNumber = cmd[1].toUInt();
 
@@ -1353,13 +1580,13 @@ void OutputHookerCore::processINICommands(QString signalName, QString value, boo
             }
         }
         // PacDrive commands, starts with "ul"
-        else if (commands[i].startsWith(PACCMDSTART, Qt::CaseInsensitive) == true)
+        else if (currentCommand.startsWith(PACCMDSTART, Qt::CaseInsensitive) == true)
         {
             // PacDrive set pin state command
-            if (commands[i].startsWith(PACSETSTATE, Qt::CaseInsensitive))
+            if (currentCommand.startsWith(PACSETSTATE, Qt::CaseInsensitive))
             {
                 // This will give 4 strings = 1: uls 2: ID  3: Pin  4: State
-                cmd = commands[i].split(' ', Qt::SkipEmptyParts);
+                cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
 
                 if (cmd.size() >= 4)
                 {
@@ -1370,10 +1597,10 @@ void OutputHookerCore::processINICommands(QString signalName, QString value, boo
                 }
             }
             // PacDrive set light intensity command
-            else if (commands[i].startsWith(PACSETINTENSITY, Qt::CaseInsensitive))
+            else if (currentCommand.startsWith(PACSETINTENSITY, Qt::CaseInsensitive))
             {
                 // This will give 4 strings = 1: uli  2: ID  3: Pin  4: Intensity
-                cmd = commands[i].split(' ', Qt::SkipEmptyParts);
+                cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
 
                 if (cmd.size() >= 4)
                 {
@@ -1384,10 +1611,10 @@ void OutputHookerCore::processINICommands(QString signalName, QString value, boo
                 }
             }
             // PacDrive kill all LEDs command
-            else if (commands[i].startsWith(PACKILLALLLEDS, Qt::CaseInsensitive))
+            else if (currentCommand.startsWith(PACKILLALLLEDS, Qt::CaseInsensitive))
             {
                 // This will give 2 strings = 1: ulk  2: ID
-                cmd = commands[i].split(' ', Qt::SkipEmptyParts);
+                cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
 
                 if (cmd.size() >= 2)
                 {
@@ -1396,11 +1623,46 @@ void OutputHookerCore::processINICommands(QString signalName, QString value, boo
                 }
             }
         }
+        // Launch and Close Application commands, starts with "ap"
+        else if (currentCommand.startsWith(APPCMDSTART, Qt::CaseInsensitive) == true)
+        {
+            // Launch Application command
+            if (currentCommand.startsWith(APPLAUNCH, Qt::CaseInsensitive))
+            {
+                QStringList args = QProcess::splitCommand(currentCommand);
+
+                if (args.size() >= 2)
+                {
+                    QString executable = args[1];
+                    QString parameter = (args.size() >= 3) ? args[2] : "";
+                    quint8 mode = (args.size() >= 4) ? args[3].toUInt() : 0;
+                    launchApplication(executable, parameter, mode);
+                }
+            }
+            // Close Application command
+            else if (currentCommand.startsWith(APPCLOSE, Qt::CaseInsensitive))
+            {
+                // Find the position of the first space after "apc"
+                int firstSpace = currentCommand.indexOf(' ');
+
+                if (firstSpace != -1)
+                {
+                    // Extracts everything from the first space to the end of the line
+                    QString executable = currentCommand.sliced(firstSpace).trimmed();
+                    executable.remove('"');
+
+                    if (!executable.isEmpty())
+                    {
+                        closeApplication(executable);
+                    }
+                }
+            }
+        }
         // Play WAV audio file command
-        else if (commands[i].startsWith(PLAYWAVAUDIO, Qt::CaseInsensitive))
+        else if (currentCommand.startsWith(PLAYWAVAUDIO, Qt::CaseInsensitive))
         {
             // This will give 2 strings = 1: ply  2: File
-            cmd = commands[i].split(' ', Qt::SkipEmptyParts);
+            cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
 
             if (cmd.size() >= 2)
             {
@@ -1409,7 +1671,7 @@ void OutputHookerCore::processINICommands(QString signalName, QString value, boo
             }
         }
         // Null command
-        else if (commands[i].startsWith(NULLCMD, Qt::CaseInsensitive))
+        else if (currentCommand.startsWith(NULLCMD, Qt::CaseInsensitive))
         {
             // Do nothing...
         }
@@ -1455,6 +1717,42 @@ void OutputHookerCore::setPacDriveLightIntensity(quint8 pacID, quint8 pacPin, qu
 void OutputHookerCore::turnAllPacDriveLightsOff(quint8 pacID)
 {
     emit turnAllLightsOff(pacID);
+}
+
+// Launch Application
+void OutputHookerCore::launchApplication(QString executable, QString parameter, quint8 mode)
+{
+    QString cleanExecutable = executable.trimmed();
+    if (cleanExecutable.startsWith('"') && cleanExecutable.endsWith('"'))
+    {
+        cleanExecutable = cleanExecutable.mid(1, cleanExecutable.length() - 2);
+    }
+
+    std::wstring executableStd = cleanExecutable.toStdWString();
+    std::wstring parameterStd = parameter.toStdWString();
+
+    int showCmd = SW_SHOWNORMAL;
+    switch (mode)
+    {
+    case 1: showCmd = SW_HIDE;
+        break;
+    case 2: showCmd = SW_SHOWMINIMIZED;
+        break;
+    case 3: showCmd = SW_SHOWMAXIMIZED;
+        break;
+    default: showCmd = SW_SHOWNORMAL;
+    }
+
+    ShellExecuteW(NULL, L"open", executableStd.c_str(), parameterStd.c_str(), NULL, showCmd);
+}
+
+// Close Application
+void OutputHookerCore::closeApplication(QString executable)
+{
+    QProcess closeApp;
+    executable.remove('"');
+    closeApp.start("taskkill", QStringList() << "/IM" << executable << "/F");
+    closeApp.waitForFinished();
 }
 
 // Play WAV audio file
@@ -1540,6 +1838,8 @@ void OutputHookerCore::clearOnDisconnect()
     statesNoCommands.clear();
     signalsAndData.clear();
     statesAndData.clear();
+    keyStatesAndCommands.clear();
+    lastKeyStates.clear();
     iniFileLoaded = false;
 
     if (isCoreStarted) {

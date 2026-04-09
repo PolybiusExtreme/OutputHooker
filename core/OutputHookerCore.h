@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QDir>
 #include <QScreen>
+#include <QProcess>
 #include <QSoundEffect>
 
 #include "OutputHookerConfig.h"
@@ -18,6 +19,9 @@
 #include "WinMsgModule.h"
 #include "COMPortModule.h"
 #include "PacDriveModule.h"
+
+#include <windows.h>
+#include <shellapi.h>
 
 class OutputHookerCore : public QObject
 {
@@ -28,6 +32,9 @@ class OutputHookerCore : public QObject
     QThread threadForTCPSocket;
     QThread threadForCOMPort;
     QThread threadForLight;
+
+    // Timer for KeyStates
+    QTimer *keyStateTimer;
 
 public:
     explicit OutputHookerCore(OutputHookerConfig *ohConfig, QObject *parent = nullptr);
@@ -118,6 +125,9 @@ private slots:
     // TCP Socket disconnected
     void tcpDisconnected();
 
+    // Check KeyStates
+    void checkKeyStates();
+
     // Process data
     void processData(const QString &signal, const QString &data);
 
@@ -167,8 +177,14 @@ private:
     // Check single command loaded from INI file
     bool checkINICommand(QString commandNotChk, quint16 lineNumber, QString filePathName);
 
+    // Map key name to virtual key code
+    int mapKeyNameToCode(const QString &name);
+
     // Process commands based on INI file
     void processINICommands(QString signalName, QString value, bool isState);
+
+    // Execute commands based on INI file
+    void executeINICommands(const QStringList &commands, const QString &value = "");
 
     // Open COM port
     void comPortOpen(quint8 cpNum);
@@ -187,6 +203,12 @@ private:
 
     // Turn all PacDrive lights off
     void turnAllPacDriveLightsOff(quint8 pacID);
+
+    // Launch Application
+    void launchApplication(QString executable, QString parameter, quint8 mode);
+
+    // Close Application
+    void closeApplication(QString executable);
 
     // Play WAV audio file
     void playWavAudioFile(QString file);
@@ -227,6 +249,11 @@ private:
     // Signals & data and states & data collected from Windows message system & TCP Socket
     QMap<QString,QString> signalsAndData;
     QMap<QString,QString> statesAndData;
+
+    // KeyStates and commands
+    QMap<int, QStringList> keyStatesAndCommands;
+    QMap<int, bool> lastKeyStates;
+    int keyStatesRefreshTime;
 
     // Open COM port check
     QList<quint8> openComPortCheck;
