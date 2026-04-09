@@ -4,9 +4,9 @@
 #include <QObject>
 
 // Version info
-#define VERSION                 "1.0.0"
+#define VERSION                 "1.1.0"
 #define VERSIONMAIN             1
-#define VERSIONMID              0
+#define VERSIONMID              1
 #define VERSIONLAST             0
 
 // Settings
@@ -17,11 +17,12 @@
 #define ENDOFINIFILE            ".ini"
 #define DEFAULTFILE             "default"
 #define JUSTMAME                "Mame"
+#define KEYSTATE                "KeyStates"
 #define SIGNALSTATE             "Output"
 
 // Display
 #define GAMEINFO                "Game Info:"
-#define GAMEINFODASHES          "------------"
+#define GAMEINFODASHES          "-------------"
 #define ROMEQUALS               "ROM="
 #define GAMEFILE                "File="
 #define MAMENOGAMEEMPTY         "___empty"
@@ -63,6 +64,9 @@
 #define PACSETSTATE             "uls"
 #define PACSETINTENSITY         "uli"
 #define PACKILLALLLEDS          "ulk"
+#define APPCMDSTART             "ap"
+#define APPLAUNCH               "apl"
+#define APPCLOSE                "apc"
 #define PLAYWAVAUDIO            "ply"
 #define NULLCMD                 "nll"
 #define SIGNALDATAVARIABLE      "%s%"
@@ -88,6 +92,8 @@ enum CommandType
     CmdUltimarcState,
     CmdUltimarcIntensity,
     CmdUltimarcKill,
+    CmdAppLaunch,
+    CmdAppClose,
     CmdPlayWav,
     CmdNull
 };
@@ -99,6 +105,8 @@ struct FunctionCommand
     QString param1;
     QString param2;
     QString param3;
+    QString param4;
+    QString param5;
 };
 
 // Windows message system
