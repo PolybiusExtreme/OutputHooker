@@ -27,6 +27,7 @@ qt_add_executable(OutputHooker
     gui/TestOutputWindow.h gui/TestOutputWindow.cpp gui/TestOutputWindow.ui
     gui/EditorWindow.h gui/EditorWindow.cpp gui/EditorWindow.ui
     gui/EditorAddCmdWindow.h gui/EditorAddCmdWindow.cpp gui/EditorAddCmdWindow.ui
+    gui/EditorAddKeyStateWindow.h gui/EditorAddKeyStateWindow.cpp gui/EditorAddKeyStateWindow.ui
     gui/AboutWindow.h gui/AboutWindow.cpp gui/AboutWindow.ui
     gui/SyntaxHighlighter.h
     gui/GuiUtilities.h
