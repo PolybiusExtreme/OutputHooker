@@ -18,7 +18,7 @@ This tool acts as the essential bridge between emulators and your arcade hardwar
   - Ultimarc LED boards
 
 - **INI Support**
-  - MAMEHooker INI files are supported
+  - MAMEHooker INI files and KeyStates are supported
   - **OutputHooker** features a built-in editor inspired by the original MAMEHooker workflow,  
      allowing you to configure hardware triggers without leaving the app
 
@@ -50,10 +50,9 @@ For the hardware side, I’ve integrated the Ultimarc PacDrive SDK for the LED b
 - Ultimarc PacDrive SDK - [https://www.ultimarc.com/PacDriveSDK.zip](https://www.ultimarc.com/PacDriveSDK.zip)
 
 ## ToDo
-- Add Xinput functions
-- Add "Launch Application" function
-- Add KeyStates (maybe...)
-- Add support for display files (maybe...)
+- Add LedWiz support
+- Add KeyStates support
+- Add support for display files
 
 ## Credits
 - Howard Casto (MAMEHooker & MAME Interop SDK developer)  
