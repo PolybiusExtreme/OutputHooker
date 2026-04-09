@@ -3,13 +3,15 @@
 
 #include "GuiUtilities.h"
 
+int TestOutputWindow::lastSelectedFunction = 0;
+
 TestOutputWindow::TestOutputWindow(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::TestOutputWindow)
 {
-    ui->setupUi(this);
+    QWidget::setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowSystemMenuHint | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
 
-    setWindowModality(Qt::ApplicationModal);
+    ui->setupUi(this);
 
     ui->horizontalLayout_Parameter->setAlignment(Qt::AlignLeft);
 
@@ -31,6 +33,8 @@ TestOutputWindow::TestOutputWindow(QWidget *parent)
     ui->cbFunction->addItem("Ultimarc - Set LED State",     CmdUltimarcState);
     ui->cbFunction->addItem("Ultimarc - Set LED Intensity", CmdUltimarcIntensity);
     ui->cbFunction->addItem("Ultimarc - Kill All LEDs",     CmdUltimarcKill);
+    ui->cbFunction->addItem("Launch Application",           CmdAppLaunch);
+    ui->cbFunction->addItem("Close Application",            CmdAppClose);
     ui->cbFunction->addItem("Play WAV Audio File",          CmdPlayWav);
 
     ui->cbFunction->setStyleSheet("QComboBox { combobox-popup: 0; }");
@@ -41,14 +45,21 @@ TestOutputWindow::TestOutputWindow(QWidget *parent)
     ui->cbParameter2->view()->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     ui->cbParameter3->setStyleSheet("QComboBox { combobox-popup: 0; }");
     ui->cbParameter3->view()->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    ui->cbParameter4->setStyleSheet("QComboBox { combobox-popup: 0; }");
+    ui->cbParameter4->view()->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    ui->cbParameter5->setStyleSheet("QComboBox { combobox-popup: 0; }");
+    ui->cbParameter5->view()->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
-    setParamLabelVisibility(false, false, false);
-    setParamComboBoxVisibility(false, false, false);
-    setParamLineEditVisibility(false, false, false);
+    setParamLabelVisibility(false, false, false, false, false);
+    setParamComboBoxVisibility(false, false, false, false, false);
+    setParamLineEditVisibility(false, false, false, false, false);
 
     validator255 = new QIntValidator(0, 255, this);
 
     ui->lineEditCommand->setEnabled(false);
+
+    //Set last selected function
+    ui->cbFunction->setCurrentIndex(lastSelectedFunction);
 
     // Handle function ComboBox
     connect(ui->cbFunction, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &TestOutputWindow::handleFunctionChanged);
@@ -73,11 +84,23 @@ TestOutputWindow::TestOutputWindow(QWidget *parent)
     connect(ui->cbParameter3, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &TestOutputWindow::updateCommandDisplay);
     connect(ui->lineEditParameter3, &QLineEdit::textChanged, this, &TestOutputWindow::updateCommandDisplay);
 
+    // Update parameter 4 text in lineEditCommand
+    connect(ui->cbParameter4, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &TestOutputWindow::updateCommandDisplay);
+    connect(ui->lineEditParameter4, &QLineEdit::textChanged, this, &TestOutputWindow::updateCommandDisplay);
+
+    // Update parameter 5 text in lineEditCommand
+    connect(ui->cbParameter5, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &TestOutputWindow::updateCommandDisplay);
+    connect(ui->lineEditParameter5, &QLineEdit::textChanged, this, &TestOutputWindow::updateCommandDisplay);
+
+    handleFunctionChanged(ui->cbFunction->currentIndex());
+
     updateCommandDisplay();
 
     adjustSize();
 
     GuiUtilities::centerWidgetOnScreen(this);
+
+    this->setFixedSize(this->size());
 }
 
 TestOutputWindow::~TestOutputWindow()
@@ -150,6 +173,18 @@ FunctionCommand TestOutputWindow::getCommand() const
         cmd.param1 = ui->cbParameter1->currentText();
         break;
 
+    case CmdAppLaunch:
+        cmd.commandCode = APPLAUNCH;
+        cmd.param1 = ui->lineEditParameter1->text();
+        cmd.param2 = ui->lineEditParameter2->text();
+        cmd.param3 = ui->cbParameter3->currentData().toString();
+        break;
+
+    case CmdAppClose:
+        cmd.commandCode = APPCLOSE;
+        cmd.param1 = ui->lineEditParameter1->text();
+        break;
+
     case CmdPlayWav:
         cmd.commandCode = PLAYWAVAUDIO;
         cmd.param1 = ui->lineEditParameter1->text();
@@ -174,13 +209,16 @@ void TestOutputWindow::updateCommandDisplay()
         return;
     }
 
-    QString display = cmd.commandCode;
+    QString separator = " ";
+    QStringList parts;
+    if (!cmd.commandCode.isEmpty()) parts << cmd.commandCode;
+    if (!cmd.param1.isEmpty())      parts << cmd.param1;
+    if (!cmd.param2.isEmpty())      parts << cmd.param2;
+    if (!cmd.param3.isEmpty())      parts << cmd.param3;
+    if (!cmd.param4.isEmpty())      parts << cmd.param4;
+    if (!cmd.param5.isEmpty())      parts << cmd.param5;
 
-    if (!cmd.param1.isEmpty()) display += " " + cmd.param1;
-    if (!cmd.param2.isEmpty()) display += " " + cmd.param2;
-    if (!cmd.param3.isEmpty()) display += " " + cmd.param3;
-
-    ui->lineEditCommand->setText(display);
+    ui->lineEditCommand->setText(parts.join(separator));
 }
 
 // Clear error style
@@ -216,6 +254,8 @@ void TestOutputWindow::on_pushButtonCancel_clicked()
 // Handle function ComboBox
 void TestOutputWindow::handleFunctionChanged(int index)
 {
+    lastSelectedFunction = index;
+
     CommandType cmd = static_cast<CommandType>(ui->cbFunction->itemData(index).toInt());
     resetInputs();
 
@@ -247,14 +287,19 @@ void TestOutputWindow::handleFunctionChanged(int index)
         setupUltimarcUI(cmd);
         break;
 
+    case CmdAppLaunch:
+    case CmdAppClose:
+        setupAppUI(cmd);
+        break;
+
     case CmdPlayWav:
         setupAudioUI();
         break;
 
     default:
-        setParamLabelVisibility(false, false, false);
-        setParamComboBoxVisibility(false, false, false);
-        setParamLineEditVisibility(false, false, false);
+        setParamLabelVisibility(false, false, false, false, false);
+        setParamComboBoxVisibility(false, false, false, false, false);
+        setParamLineEditVisibility(false, false, false, false, false);
         break;
     }
 
@@ -267,9 +312,9 @@ void TestOutputWindow::handleFunctionChanged(int index)
 // Setup UI - COM Port functions
 void TestOutputWindow::setupComPortUI(CommandType cmd)
 {
-    setParamLabelVisibility(true, false, false);
-    setParamComboBoxVisibility(true, false, false);
-    setParamLineEditVisibility(false, false, false);
+    setParamLabelVisibility(true, false, false, false, false);
+    setParamComboBoxVisibility(true, false, false, false, false);
+    setParamLineEditVisibility(false, false, false, false, false);
     ui->labelParameter1->setFixedWidth(60);
     ui->labelParameter1->setText("Port:");
     ui->cbParameter1->setFixedWidth(60);
@@ -278,8 +323,8 @@ void TestOutputWindow::setupComPortUI(CommandType cmd)
 
     if (cmd == CmdComOpen || cmd == CmdComSet || cmd == CmdComWrite)
     {
-        setParamLabelVisibility(true, true, false);
-        setParamLineEditVisibility(false, true, false);
+        setParamLabelVisibility(true, true, false, false, false);
+        setParamLineEditVisibility(false, true, false, false, false);
 
         if (cmd == CmdComWrite)
         {
@@ -297,9 +342,9 @@ void TestOutputWindow::setupComPortUI(CommandType cmd)
 // Setup UI - GUN4IR functions
 void TestOutputWindow::setupGun4irUI(CommandType cmd)
 {
-    setParamLabelVisibility(true, true, false);
-    setParamComboBoxVisibility(true, true, false);
-    setParamLineEditVisibility(false, false, false);
+    setParamLabelVisibility(true, true, false, false, false);
+    setParamComboBoxVisibility(true, true, false, false, false);
+    setParamLineEditVisibility(false, false, false, false, false);
 
     ui->labelParameter1->setFixedWidth(60);
     ui->labelParameter1->setText("Port:");
@@ -373,9 +418,9 @@ void TestOutputWindow::setupGun4irUI(CommandType cmd)
 // Setup UI - Ultimarc functions
 void TestOutputWindow::setupUltimarcUI(CommandType cmd)
 {
-    setParamLabelVisibility(true, false, false);
-    setParamComboBoxVisibility(true, false, false);
-    setParamLineEditVisibility(false, false, false);
+    setParamLabelVisibility(true, false, false, false, false);
+    setParamComboBoxVisibility(true, false, false, false, false);
+    setParamLineEditVisibility(false, false, false, false, false);
     ui->labelParameter1->setFixedWidth(60);
     ui->labelParameter1->setText("Device:");
     ui->cbParameter1->setFixedWidth(60);
@@ -384,22 +429,22 @@ void TestOutputWindow::setupUltimarcUI(CommandType cmd)
 
     if (cmd == CmdUltimarcState || cmd == CmdUltimarcIntensity)
     {
-        setParamLabelVisibility(true, true, true);
-        setParamComboBoxVisibility(true, true, false);
+        setParamLabelVisibility(true, true, true, false, false);
+        setParamComboBoxVisibility(true, true, false, false, false);
         ui->labelParameter2->setText("Pin:");
         for (int i = 1; i <= 96; ++i)
             ui->cbParameter2->addItem(QString::number(i));
 
         if (cmd == CmdUltimarcState)
         {
-            setParamComboBoxVisibility(true, true, true);
+            setParamComboBoxVisibility(true, true, true, false, false);
             ui->labelParameter3->setText("State:");
             ui->cbParameter3->addItem("Off", "0");
             ui->cbParameter3->addItem("On", "1");
         }
         else
         {
-            setParamLineEditVisibility(false, false, true);
+            setParamLineEditVisibility(false, false, true, false, false);
             ui->labelParameter3->setText("Intensity:");
             ui->lineEditParameter3->setValidator(validator255);
             ui->lineEditParameter3->setText("255");
@@ -407,12 +452,46 @@ void TestOutputWindow::setupUltimarcUI(CommandType cmd)
     }
 }
 
+// Setup UI - Launch Application function
+void TestOutputWindow::setupAppUI(CommandType cmd)
+{
+    if (cmd == CmdAppLaunch)
+    {
+        setParamLabelVisibility(true, true, true, false, false);
+        setParamComboBoxVisibility(false, false, true, false, false);
+        setParamLineEditVisibility(true, true, false, false, false);
+
+        ui->labelParameter1->setFixedWidth(115);
+        ui->labelParameter1->setText("Path & Executable:");
+        ui->lineEditParameter1->setFixedWidth(115);
+        ui->lineEditParameter1->setText(R"("C:\app\app.exe")");
+        ui->labelParameter2->setFixedWidth(80);
+        ui->labelParameter2->setText("Parameters:");
+        ui->lineEditParameter2->setFixedWidth(80);
+        ui->lineEditParameter2->setText(R"("parameters")");
+        ui->labelParameter3->setText("Mode:");
+        ui->cbParameter3->addItem("Normal", "0");
+        ui->cbParameter3->addItem("Hidden", "1");
+        ui->cbParameter3->addItem("Minimized", "2");
+        ui->cbParameter3->addItem("Maximized", "3");
+    }
+    else
+    {
+        setParamLabelVisibility(true, false, false, false, false);
+        setParamComboBoxVisibility(false, false, false, false, false);
+        setParamLineEditVisibility(true, false, false, false, false);
+
+        ui->labelParameter1->setText("Executable:");
+        ui->lineEditParameter1->setText(R"("app.exe")");
+    }
+}
+
 // Setup UI - Play WAV audio file function
 void TestOutputWindow::setupAudioUI()
 {
-    setParamLabelVisibility(true, false, false);
-    setParamComboBoxVisibility(false, false, false);
-    setParamLineEditVisibility(true, false, false);
+    setParamLabelVisibility(true, false, false, false, false);
+    setParamComboBoxVisibility(false, false, false, false, false);
+    setParamLineEditVisibility(true, false, false, false, false);
 
     ui->labelParameter1->setText("WAV Audio File:");
     ui->lineEditParameter1->setText("test.wav");
@@ -429,6 +508,16 @@ bool TestOutputWindow::checkCommand(const FunctionCommand &cmd)
     if (cmd.commandCode == PACSETINTENSITY)
     {
         return validateLedIntensityValue(cmd);
+    }
+
+    if (cmd.commandCode == APPLAUNCH)
+    {
+        return validateLaunchApp(cmd);
+    }
+
+    if (cmd.commandCode == APPCLOSE)
+    {
+        return validateCloseApp(cmd);
     }
 
     if (cmd.commandCode == PLAYWAVAUDIO)
@@ -608,6 +697,49 @@ bool TestOutputWindow::validateLedIntensityValue(const FunctionCommand &cmd)
     return true;
 }
 
+// Validate "Launch Application"
+bool TestOutputWindow::validateLaunchApp(const FunctionCommand &cmd)
+{
+    const QString errorStyle = "border: 1px solid red;";
+
+    if (cmd.param1.isEmpty())
+    {
+        ui->lineEditParameter1->setStyleSheet(errorStyle);
+        QString errorMsg = "The path & executable field is empty!";
+        GuiUtilities::showMessageBoxCentered(this, "Launch Application - Error", errorMsg, QMessageBox::Critical);
+        return false;
+    }
+
+    QString executableFilePath = cmd.param1;
+    executableFilePath.remove('"');
+
+    if (!QFile::exists(executableFilePath))
+    {
+        ui->lineEditParameter1->setStyleSheet(errorStyle);
+        QString errorMsg = executableFilePath + " not found!";
+        GuiUtilities::showMessageBoxCentered(this, "Launch Application - Error", errorMsg, QMessageBox::Critical);
+        return false;
+    }
+
+    return true;
+}
+
+// Validate "Close Application"
+bool TestOutputWindow::validateCloseApp(const FunctionCommand &cmd)
+{
+    const QString errorStyle = "border: 1px solid red;";
+
+    if (cmd.param1.isEmpty())
+    {
+        ui->lineEditParameter1->setStyleSheet(errorStyle);
+        QString errorMsg = "The executable field is empty!";
+        GuiUtilities::showMessageBoxCentered(this, "Close Application - Error", errorMsg, QMessageBox::Critical);
+        return false;
+    }
+
+    return true;
+}
+
 // Validate WAV audio file
 bool TestOutputWindow::validateWavAudioFile(const FunctionCommand &cmd)
 {
@@ -626,6 +758,7 @@ bool TestOutputWindow::validateWavAudioFile(const FunctionCommand &cmd)
 
     if (!QFile::exists(wavFilePath))
     {
+        ui->lineEditParameter1->setStyleSheet(errorStyle);
         QString errorMsg = wavFile + " not found!";
         GuiUtilities::showMessageBoxCentered(this, "Play WAV Audio File - Error", errorMsg, QMessageBox::Critical);
         return false;
@@ -635,27 +768,33 @@ bool TestOutputWindow::validateWavAudioFile(const FunctionCommand &cmd)
 }
 
 // Set parameter Label visibility
-void TestOutputWindow::setParamLabelVisibility(bool l1, bool l2, bool l3)
+void TestOutputWindow::setParamLabelVisibility(bool l1, bool l2, bool l3, bool l4, bool l5)
 {
     ui->labelParameter1->setVisible(l1);
     ui->labelParameter2->setVisible(l2);
     ui->labelParameter3->setVisible(l3);
+    ui->labelParameter4->setVisible(l4);
+    ui->labelParameter5->setVisible(l5);
 }
 
 // Set parameter ComboBox visibility
-void TestOutputWindow::setParamComboBoxVisibility(bool cb1, bool cb2, bool cb3)
+void TestOutputWindow::setParamComboBoxVisibility(bool cb1, bool cb2, bool cb3, bool cb4, bool cb5)
 {
     ui->cbParameter1->setVisible(cb1);
     ui->cbParameter2->setVisible(cb2);
     ui->cbParameter3->setVisible(cb3);
+    ui->cbParameter4->setVisible(cb4);
+    ui->cbParameter5->setVisible(cb5);
 }
 
 // Set parameter LineEdit visibility
-void TestOutputWindow::setParamLineEditVisibility(bool le1, bool le2, bool le3)
+void TestOutputWindow::setParamLineEditVisibility(bool le1, bool le2, bool le3, bool le4, bool le5)
 {
     ui->lineEditParameter1->setVisible(le1);
     ui->lineEditParameter2->setVisible(le2);
     ui->lineEditParameter3->setVisible(le3);
+    ui->lineEditParameter4->setVisible(le4);
+    ui->lineEditParameter5->setVisible(le5);
 }
 
 // Reset all inputs
@@ -688,4 +827,14 @@ void TestOutputWindow::resetInputs()
     ui->lineEditParameter1->setValidator(nullptr);
     ui->lineEditParameter2->setValidator(nullptr);
     ui->lineEditParameter3->setValidator(nullptr);
+    ui->lineEditParameter1->setMinimumWidth(0);
+    ui->lineEditParameter2->setMinimumWidth(0);
+    ui->lineEditParameter3->setMinimumWidth(0);
+    ui->lineEditParameter4->setMinimumWidth(0);
+    ui->lineEditParameter5->setMinimumWidth(0);
+    ui->lineEditParameter1->setMaximumWidth(16777215);
+    ui->lineEditParameter2->setMaximumWidth(16777215);
+    ui->lineEditParameter3->setMaximumWidth(16777215);
+    ui->lineEditParameter4->setMaximumWidth(16777215);
+    ui->lineEditParameter5->setMaximumWidth(16777215);
 }
