@@ -3,8 +3,8 @@ IDI_ICON1 ICON "resources\\icon\\OutputHooker.ico"
 #include <windows.h>
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 1,0,0,0
-PRODUCTVERSION 1,0,0,0
+FILEVERSION 1,1,0,0
+PRODUCTVERSION 1,1,0,0
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
@@ -12,7 +12,7 @@ BEGIN
         BEGIN
             VALUE "CompanyName",      "PolybiusExtreme"
             VALUE "FileDescription",  "Arcade Output Manager"
-            VALUE "FileVersion",      "1.0.0.0"
+            VALUE "FileVersion",      "1.1.0.0"
             VALUE "InternalName",     "OutputHooker"
             VALUE "LegalCopyright",   "Copyright (c) 2026 PolybiusExtreme"
             VALUE "OriginalFilename", "OutputHooker.exe"
