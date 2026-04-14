@@ -240,7 +240,7 @@ void OutputHooker::on_actionTestOutputs_triggered()
     {
         testOutputAction->setEnabled(false);
         p_testOutputWindow = new TestOutputWindow(this);
-        connect(p_testOutputWindow, &TestOutputWindow::sendTestCommand, p_core, &OutputHookerCore::executeCommand);
+        connect(p_testOutputWindow, &TestOutputWindow::sendTestCommand, p_core, &OutputHookerCore::executeTestCommand);
         connect(p_testOutputWindow, &TestOutputWindow::rejected, this, &OutputHooker::TestOutputWindow_closed);
     }
     p_testOutputWindow->exec();
