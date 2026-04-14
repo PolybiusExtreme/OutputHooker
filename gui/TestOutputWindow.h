@@ -52,6 +52,7 @@ private:
     // Setup functions in UI
     void setupComPortUI(CommandType cmd);
     void setupGun4irUI(CommandType cmd);
+    void setupLedWizUI(CommandType cmd);
     void setupUltimarcUI(CommandType cmd);
     void setupAppUI(CommandType cmd);
     void setupAudioUI();

@@ -30,8 +30,14 @@ TestOutputWindow::TestOutputWindow(QWidget *parent)
     ui->cbFunction->addItem("GUN4IR - Auto Reload",         CmdGun4irRL);
     ui->cbFunction->addItem("GUN4IR - Rumble Only",         CmdGun4irRO);
     ui->cbFunction->addItem("GUN4IR - Full Auto",           CmdGun4irFA);
+    ui->cbFunction->addItem("LEDWiz - Set Pin State",       CmdLedWizState);
+    ui->cbFunction->addItem("LEDWiz - Set Power Level",     CmdLedWizPower);
+    ui->cbFunction->addItem("LEDWiz - Set RGB LED Color",   CmdLedWizColor);
+    ui->cbFunction->addItem("LEDWiz - Set Pulse Rate",      CmdLedWizPulse);
+    ui->cbFunction->addItem("LEDWiz - Kill All LEDs",       CmdLedWizKill);
     ui->cbFunction->addItem("Ultimarc - Set LED State",     CmdUltimarcState);
     ui->cbFunction->addItem("Ultimarc - Set LED Intensity", CmdUltimarcIntensity);
+    ui->cbFunction->addItem("Ultimarc - Set RGB LED Color", CmdUltimarcColor);
     ui->cbFunction->addItem("Ultimarc - Kill All LEDs",     CmdUltimarcKill);
     ui->cbFunction->addItem("Launch Application",           CmdAppLaunch);
     ui->cbFunction->addItem("Close Application",            CmdAppClose);
@@ -154,6 +160,41 @@ FunctionCommand TestOutputWindow::getCommand() const
         cmd.param2 = ui->cbParameter2->currentData().toString();
         break;
 
+    case CmdLedWizState:
+        cmd.commandCode = LWSETSTATE;
+        cmd.param1 = ui->cbParameter1->currentText();
+        cmd.param2 = ui->cbParameter2->currentText();
+        cmd.param3 = ui->cbParameter3->currentData().toString();
+        break;
+
+    case CmdLedWizPower:
+        cmd.commandCode = LWSETPOWER;
+        cmd.param1 = ui->cbParameter1->currentText();
+        cmd.param2 = ui->cbParameter2->currentText();
+        cmd.param3 = ui->cbParameter3->currentData().toString();
+        break;
+
+    case CmdLedWizColor:
+        cmd.commandCode = LWSETCOLOR;
+        cmd.param1 = ui->cbParameter1->currentText();
+        cmd.param2 = ui->cbParameter2->currentText();
+        cmd.param3 = ui->cbParameter3->currentData().toString();
+        cmd.param4 = ui->cbParameter4->currentData().toString();
+        cmd.param5 = ui->cbParameter5->currentData().toString();
+        break;
+
+    case CmdLedWizPulse:
+        cmd.commandCode = LWSETPULSE;
+        cmd.param1 = ui->cbParameter1->currentText();
+        cmd.param2 = ui->cbParameter2->currentText();
+        cmd.param3 = ui->cbParameter3->currentData().toString();
+        break;
+
+    case CmdLedWizKill:
+        cmd.commandCode = LWKILLALLLEDS;
+        cmd.param1 = ui->cbParameter1->currentText();
+        break;
+
     case CmdUltimarcState:
         cmd.commandCode = PACSETSTATE;
         cmd.param1 = ui->cbParameter1->currentText();
@@ -166,6 +207,15 @@ FunctionCommand TestOutputWindow::getCommand() const
         cmd.param1 = ui->cbParameter1->currentText();
         cmd.param2 = ui->cbParameter2->currentText();
         cmd.param3 = ui->lineEditParameter3->text();
+        break;
+
+    case CmdUltimarcColor:
+        cmd.commandCode = PACSETCOLOR;
+        cmd.param1 = ui->cbParameter1->currentText();
+        cmd.param2 = ui->cbParameter2->currentText();
+        cmd.param3 = ui->cbParameter3->currentData().toString();
+        cmd.param4 = ui->cbParameter4->currentData().toString();
+        cmd.param5 = ui->cbParameter5->currentData().toString();
         break;
 
     case CmdUltimarcKill:
@@ -281,8 +331,17 @@ void TestOutputWindow::handleFunctionChanged(int index)
         setupGun4irUI(cmd);
         break;
 
+    case CmdLedWizState:
+    case CmdLedWizPower:
+    case CmdLedWizColor:
+    case CmdLedWizPulse:
+    case CmdLedWizKill:
+        setupLedWizUI(cmd);
+        break;
+
     case CmdUltimarcState:
     case CmdUltimarcIntensity:
+    case CmdUltimarcColor:
     case CmdUltimarcKill:
         setupUltimarcUI(cmd);
         break;
@@ -415,6 +474,93 @@ void TestOutputWindow::setupGun4irUI(CommandType cmd)
     }
 }
 
+// Setup UI - LedWiz functions
+void TestOutputWindow::setupLedWizUI(CommandType cmd)
+{
+    setParamLabelVisibility(true, false, false, false, false);
+    setParamComboBoxVisibility(true, false, false, false, false);
+    setParamLineEditVisibility(false, false, false, false, false);
+    ui->labelParameter1->setFixedWidth(60);
+    ui->labelParameter1->setText("Device:");
+    ui->cbParameter1->setFixedWidth(60);
+    for (int i = 1; i <= LEDWIZMAXDEVICES; ++i)
+        ui->cbParameter1->addItem(QString::number(i));
+
+    if (cmd == CmdLedWizState || cmd == CmdLedWizPower || cmd == CmdLedWizColor)
+    {
+        setParamLabelVisibility(true, true, true, false, false);
+        setParamComboBoxVisibility(true, true, false, false, false);
+        ui->labelParameter2->setFixedWidth(60);
+        ui->labelParameter2->setText("Pin:");
+        ui->cbParameter2->setFixedWidth(60);
+        for (int i = 1; i <= 32; ++i)
+            ui->cbParameter2->addItem(QString::number(i));
+
+        if (cmd == CmdLedWizState)
+        {
+            setParamComboBoxVisibility(true, true, true, false, false);
+            ui->labelParameter3->setText("State:");
+            ui->cbParameter3->addItem("Off", "0");
+            ui->cbParameter3->addItem("On", "1");
+        }
+        else if (cmd == CmdLedWizPower)
+        {
+            setParamComboBoxVisibility(true, true, true, false, false);
+            ui->labelParameter3->setFixedWidth(95);
+            ui->labelParameter3->setText("Power Level:");
+            ui->cbParameter3->setFixedWidth(95);
+            for (int i = 0; i <= 48; ++i)
+                ui->cbParameter3->addItem(QString::number(i), QString::number(i));
+            ui->cbParameter3->addItem("Fade in/out", "129");
+            ui->cbParameter3->addItem("Blink", "130");
+            ui->cbParameter3->addItem("Fade out", "131");
+            ui->cbParameter3->addItem("Fade in", "132");
+        }
+        else if (cmd == CmdLedWizColor)
+        {
+            setParamLabelVisibility(true, true, true, true, true);
+            setParamComboBoxVisibility(true, true, true, true, true);
+            ui->labelParameter3->setFixedWidth(95);
+            ui->labelParameter3->setText("Red Value:");
+            ui->cbParameter3->setFixedWidth(95);
+            for (int i = 0; i <= 48; ++i)
+                ui->cbParameter3->addItem(QString::number(i), QString::number(i));
+            ui->cbParameter3->addItem("Fade in/out", "129");
+            ui->cbParameter3->addItem("Blink", "130");
+            ui->cbParameter3->addItem("Fade out", "131");
+            ui->cbParameter3->addItem("Fade in", "132");
+            ui->labelParameter4->setFixedWidth(95);
+            ui->labelParameter4->setText("Green Value:");
+            ui->cbParameter4->setFixedWidth(95);
+            for (int i = 0; i <= 48; ++i)
+                ui->cbParameter4->addItem(QString::number(i), QString::number(i));
+            ui->cbParameter4->addItem("Fade in/out", "129");
+            ui->cbParameter4->addItem("Blink", "130");
+            ui->cbParameter4->addItem("Fade out", "131");
+            ui->cbParameter4->addItem("Fade in", "132");
+            ui->labelParameter5->setFixedWidth(95);
+            ui->labelParameter5->setText("Blue Value:");
+            ui->cbParameter5->setFixedWidth(95);
+            for (int i = 0; i <= 48; ++i)
+                ui->cbParameter5->addItem(QString::number(i), QString::number(i));
+            ui->cbParameter5->addItem("Fade in/out", "129");
+            ui->cbParameter5->addItem("Blink", "130");
+            ui->cbParameter5->addItem("Fade out", "131");
+            ui->cbParameter5->addItem("Fade in", "132");
+        }
+    }
+    else if (cmd == CmdLedWizPulse)
+    {
+        setParamLabelVisibility(true, true, false, false, false);
+        setParamComboBoxVisibility(true, true, false, false, false);
+        ui->labelParameter2->setFixedWidth(65);
+        ui->labelParameter2->setText("Pulse Rate:");
+        ui->cbParameter2->setFixedWidth(65);
+        for (int i = 1; i <= 7; ++i)
+            ui->cbParameter2->addItem(QString::number(i), QString::number(i));
+    }
+}
+
 // Setup UI - Ultimarc functions
 void TestOutputWindow::setupUltimarcUI(CommandType cmd)
 {
@@ -427,11 +573,13 @@ void TestOutputWindow::setupUltimarcUI(CommandType cmd)
     for (int i = 1; i <= ULTIMARCMAXDEVICES; ++i)
         ui->cbParameter1->addItem(QString::number(i));
 
-    if (cmd == CmdUltimarcState || cmd == CmdUltimarcIntensity)
+    if (cmd == CmdUltimarcState || cmd == CmdUltimarcIntensity || cmd == CmdUltimarcColor)
     {
         setParamLabelVisibility(true, true, true, false, false);
         setParamComboBoxVisibility(true, true, false, false, false);
+        ui->labelParameter2->setFixedWidth(60);
         ui->labelParameter2->setText("Pin:");
+        ui->cbParameter2->setFixedWidth(60);
         for (int i = 1; i <= 96; ++i)
             ui->cbParameter2->addItem(QString::number(i));
 
@@ -442,12 +590,32 @@ void TestOutputWindow::setupUltimarcUI(CommandType cmd)
             ui->cbParameter3->addItem("Off", "0");
             ui->cbParameter3->addItem("On", "1");
         }
-        else
+        else if (cmd == CmdUltimarcIntensity)
         {
             setParamLineEditVisibility(false, false, true, false, false);
             ui->labelParameter3->setText("Intensity:");
             ui->lineEditParameter3->setValidator(validator255);
             ui->lineEditParameter3->setText("255");
+        }
+        else if (cmd == CmdUltimarcColor)
+        {
+            setParamLabelVisibility(true, true, true, true, true);
+            setParamComboBoxVisibility(true, true, true, true, true);
+            ui->labelParameter3->setFixedWidth(75);
+            ui->labelParameter3->setText("Red Value:");
+            ui->cbParameter3->setFixedWidth(75);
+            for (int i = 0; i <= 255; ++i)
+                ui->cbParameter3->addItem(QString::number(i), QString::number(i));
+            ui->labelParameter4->setFixedWidth(75);
+            ui->labelParameter4->setText("Green Value:");
+            ui->cbParameter4->setFixedWidth(75);
+            for (int i = 0; i <= 255; ++i)
+                ui->cbParameter4->addItem(QString::number(i), QString::number(i));
+            ui->labelParameter5->setFixedWidth(75);
+            ui->labelParameter5->setText("Blue Value:");
+            ui->cbParameter5->setFixedWidth(75);
+            for (int i = 0; i <= 255; ++i)
+                ui->cbParameter5->addItem(QString::number(i), QString::number(i));
         }
     }
 }
@@ -803,30 +971,48 @@ void TestOutputWindow::resetInputs()
     ui->labelParameter1->setMinimumWidth(0);
     ui->labelParameter2->setMinimumWidth(0);
     ui->labelParameter3->setMinimumWidth(0);
+    ui->labelParameter4->setMinimumWidth(0);
+    ui->labelParameter5->setMinimumWidth(0);
     ui->labelParameter1->setMaximumWidth(16777215);
     ui->labelParameter2->setMaximumWidth(16777215);
     ui->labelParameter3->setMaximumWidth(16777215);
+    ui->labelParameter4->setMaximumWidth(16777215);
+    ui->labelParameter5->setMaximumWidth(16777215);
     ui->cbParameter1->clear();
     ui->cbParameter2->clear();
     ui->cbParameter3->clear();
+    ui->cbParameter4->clear();
+    ui->cbParameter5->clear();
     ui->cbParameter1->setMinimumWidth(0);
     ui->cbParameter2->setMinimumWidth(0);
     ui->cbParameter3->setMinimumWidth(0);
+    ui->cbParameter4->setMinimumWidth(0);
+    ui->cbParameter5->setMinimumWidth(0);
     ui->cbParameter1->setMaximumWidth(16777215);
     ui->cbParameter2->setMaximumWidth(16777215);
     ui->cbParameter3->setMaximumWidth(16777215);
+    ui->cbParameter4->setMaximumWidth(16777215);
+    ui->cbParameter5->setMaximumWidth(16777215);
     ui->lineEditParameter1->clear();
     ui->lineEditParameter2->clear();
     ui->lineEditParameter3->clear();
+    ui->lineEditParameter4->clear();
+    ui->lineEditParameter5->clear();
     ui->lineEditParameter1->setToolTip("");
     ui->lineEditParameter2->setToolTip("");
     ui->lineEditParameter3->setToolTip("");
+    ui->lineEditParameter4->setToolTip("");
+    ui->lineEditParameter5->setToolTip("");
     ui->lineEditParameter1->setInputMask("");
     ui->lineEditParameter2->setInputMask("");
     ui->lineEditParameter3->setInputMask("");
+    ui->lineEditParameter4->setInputMask("");
+    ui->lineEditParameter5->setInputMask("");
     ui->lineEditParameter1->setValidator(nullptr);
     ui->lineEditParameter2->setValidator(nullptr);
     ui->lineEditParameter3->setValidator(nullptr);
+    ui->lineEditParameter4->setValidator(nullptr);
+    ui->lineEditParameter5->setValidator(nullptr);
     ui->lineEditParameter1->setMinimumWidth(0);
     ui->lineEditParameter2->setMinimumWidth(0);
     ui->lineEditParameter3->setMinimumWidth(0);

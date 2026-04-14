@@ -220,6 +220,14 @@ void EditorWindow::on_actionCommand_triggered()
             finalString = parts.join(" ");
             break;
 
+        case CmdLedWizColor:
+        case CmdUltimarcColor:
+            // [Command] [Parameter1] [Parameter2] [Parameter3] [Parameter4] [Parameter5]
+            finalString = QString("%1 %2 %3 %4 %5 %6").arg(res.commandCode, res.param1, res.param2, res.param3, res.param4, res.param5);
+            break;
+
+        case CmdLedWizState:
+        case CmdLedWizPower:
         case CmdUltimarcIntensity:
         case CmdUltimarcState:
             // [Command] [Parameter1] [Parameter2] [Parameter3]
@@ -239,6 +247,7 @@ void EditorWindow::on_actionCommand_triggered()
         case CmdGun4irRL:
         case CmdGun4irRO:
         case CmdGun4irFA:
+        case CmdLedWizPulse:
             // [Command] [Parameter1] [Parameter2]
             finalString = QString("%1 %2 %3").arg(res.commandCode, res.param1, res.param2);
             break;
@@ -249,6 +258,7 @@ void EditorWindow::on_actionCommand_triggered()
             break;
 
         case CmdComClose:
+        case CmdLedWizKill:
         case CmdUltimarcKill:
         case CmdAppClose:
         case CmdPlayWav:
