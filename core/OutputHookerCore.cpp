@@ -145,28 +145,53 @@ OutputHookerCore::OutputHookerCore(OutputHookerConfig *ohConfig, QObject *parent
         threadForCOMPort.start(QThread::HighPriority);
     }
 
+    // Set up LedWiz
+    p_ledWiz = new LedWizModule();
+
+    if (useMultiThreading)
+    {
+        // Move LedWizModule to different thread
+        p_ledWiz->moveToThread(&threadForLedWiz);
+        connect(&threadForLedWiz, &QThread::finished, p_ledWiz, &QObject::deleteLater);
+    }
+
+    // LedWiz connections
+    connect(this, &OutputHookerCore::setLwPinState, p_ledWiz, &LedWizModule::setPinState);
+    connect(this, &OutputHookerCore::setLwPowerLevel, p_ledWiz, &LedWizModule::setPowerLevel);
+    connect(this, &OutputHookerCore::setLwRGBColor, p_ledWiz, &LedWizModule::setRGBColor);
+    connect(this, &OutputHookerCore::setLwPulseRate, p_ledWiz, &LedWizModule::setPulseRate);
+    connect(this, &OutputHookerCore::turnAllLwLightsOff, p_ledWiz, &LedWizModule::turnAllLightsOff);
+    connect(p_ledWiz,&LedWizModule::showErrorMessage, this, &OutputHookerCore::errorMessage);
+
+    if (useMultiThreading)
+    {
+        // Start LedWiz thread
+        threadForLedWiz.start(QThread::HighPriority);
+    }
+
     // Set up Ultimarc PacDrive
     p_pacDrive = new PacDriveModule();
 
     if (useMultiThreading)
     {
     // Move PacDriveModule to different thread
-    p_pacDrive->moveToThread(&threadForLight);
-    connect(&threadForLight, &QThread::finished, p_pacDrive, &QObject::deleteLater);
+    p_pacDrive->moveToThread(&threadForUltimarc);
+    connect(&threadForUltimarc, &QThread::finished, p_pacDrive, &QObject::deleteLater);
     }
 
     // PacDrive connections
 
     // Connect the signals & slots for PacDrive
-    connect(this, &OutputHookerCore::setPinState, p_pacDrive, &PacDriveModule::setPinState);
-    connect(this, &OutputHookerCore::setLightIntensity, p_pacDrive, &PacDriveModule::setLightIntensity);
-    connect(this, &OutputHookerCore::turnAllLightsOff, p_pacDrive, &PacDriveModule::turnAllLightsOff);
+    connect(this, &OutputHookerCore::setPdPinState, p_pacDrive, &PacDriveModule::setPinState);
+    connect(this, &OutputHookerCore::setPdLightIntensity, p_pacDrive, &PacDriveModule::setLightIntensity);
+    connect(this, &OutputHookerCore::setPdRGBColor, p_pacDrive, &PacDriveModule::setRGBColor);
+    connect(this, &OutputHookerCore::turnAllPdLightsOff, p_pacDrive, &PacDriveModule::turnAllLightsOff);
     connect(p_pacDrive,&PacDriveModule::showErrorMessage, this, &OutputHookerCore::errorMessage);
 
     if (useMultiThreading)
     {
         // Start PacDrive thread
-        threadForLight.start(QThread::HighPriority);
+        threadForUltimarc.start(QThread::HighPriority);
     }
 
     // KeyStates timer
@@ -189,17 +214,20 @@ OutputHookerCore::~OutputHookerCore()
         threadForTCPSocket.quit();
         threadForWinMsg.quit();
         threadForCOMPort.quit();
-        threadForLight.quit();
+        threadForLedWiz.quit();
+        threadForUltimarc.quit();
         threadForTCPSocket.wait();
         threadForWinMsg.wait();
         threadForCOMPort.wait();
-        threadForLight.wait();
+        threadForLedWiz.wait();
+        threadForUltimarc.wait();
     }
     else
     {
         delete p_tcpSocket;
         delete p_winMsg;
         delete p_comPort;
+        delete p_ledWiz;
         delete p_pacDrive;
     }
 }
@@ -264,7 +292,7 @@ void OutputHookerCore::setWinID(HWND handle)
 }
 
 // Execute command from TestOutputWindow
-void OutputHookerCore::executeCommand(const FunctionCommand &cmd)
+void OutputHookerCore::executeTestCommand(const FunctionCommand &cmd)
 {
     // COM port commands, starts with "cm" or "cs"
     if (cmd.commandCode.startsWith(PORTCMDSTART1, Qt::CaseInsensitive) == true || cmd.commandCode.startsWith(PORTCMDSTART2, Qt::CaseInsensitive) == true)
@@ -324,6 +352,49 @@ void OutputHookerCore::executeCommand(const FunctionCommand &cmd)
             comPortWrite(comPortNumber, cmd.param2);
         }
     }
+    // LedWiz commands, starts with "lw"
+    else if (cmd.commandCode.startsWith(LWCMDSTART, Qt::CaseInsensitive) == true)
+    {
+        // LedWiz set pin state command
+        if (cmd.commandCode.startsWith(LWSETSTATE, Qt::CaseInsensitive))
+        {
+            quint8 lwID = cmd.param1.toUInt() - 1;
+            quint8 lwPin = cmd.param2.toUInt();
+            bool lwState = (cmd.param3.toUInt() > 0);
+            setLedWizPinState(lwID, lwPin, lwState);
+        }
+        // LedWiz set power level command
+        else if (cmd.commandCode.startsWith(LWSETPOWER, Qt::CaseInsensitive))
+        {
+            quint8 lwID = cmd.param1.toUInt() - 1;
+            quint8 lwPin = cmd.param2.toUInt();
+            quint8 lwPower = cmd.param3.toUInt();
+            setLedWizPowerLevel(lwID, lwPin, lwPower);
+        }
+        // LedWiz set RGB LED color command
+        else if (cmd.commandCode.startsWith(LWSETCOLOR, Qt::CaseInsensitive))
+        {
+            quint8 lwID = cmd.param1.toUInt() - 1;
+            quint8 lwPin = cmd.param2.toUInt();
+            quint8 lwValueR = cmd.param3.toUInt();
+            quint8 lwValueG = cmd.param4.toUInt();
+            quint8 lwValueB = cmd.param5.toUInt();
+            setLedWizRGBColor(lwID, lwPin, lwValueR, lwValueG, lwValueB);
+        }
+        // LedWiz set pulse rate command
+        else if (cmd.commandCode.startsWith(LWSETPULSE, Qt::CaseInsensitive))
+        {
+            quint8 lwID = cmd.param1.toUInt() - 1;
+            quint8 lwPulse = cmd.param2.toUInt();
+            setLedWizPulseRate(lwID, lwPulse);
+        }
+        // LedWiz kill all LEDs command
+        else if (cmd.commandCode.startsWith(LWKILLALLLEDS, Qt::CaseInsensitive))
+        {
+            quint8 lwID = cmd.param1.toUInt() - 1;
+            turnAllLedWizLightsOff(lwID);
+        }
+    }
     // PacDrive commands, starts with "ul"
     else if (cmd.commandCode.startsWith(PACCMDSTART, Qt::CaseInsensitive) == true)
     {
@@ -342,6 +413,16 @@ void OutputHookerCore::executeCommand(const FunctionCommand &cmd)
             quint8 pacPin = cmd.param2.toUInt() - 1;
             quint8 pacIntensity = cmd.param3.toUInt();
             setPacDriveLightIntensity(pacID, pacPin, pacIntensity);
+        }
+        // PacDrive set RGB LED color command
+        else if (cmd.commandCode.startsWith(PACSETCOLOR, Qt::CaseInsensitive))
+        {
+            quint8 pacID = cmd.param1.toUInt() - 1;
+            quint8 pacPin = cmd.param2.toUInt() - 1;
+            quint8 pacValueR = cmd.param3.toUInt();
+            quint8 pacValueG = cmd.param4.toUInt();
+            quint8 pacValueB = cmd.param5.toUInt();
+            setPacDriveRGBColor(pacID, pacPin, pacValueR, pacValueG, pacValueB);
         }
         // PacDrive kill all LEDs command
         else if (cmd.commandCode.startsWith(PACKILLALLLEDS, Qt::CaseInsensitive))
@@ -1165,6 +1246,207 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
             return true;
         }
     }
+    // LedWiz commands, starts with "lw"
+    else if (commandNotChk.startsWith(LWCMDSTART, Qt::CaseInsensitive) == true)
+    {
+        // LedWiz set pin state command
+        if (commandNotChk.startsWith(LWSETSTATE, Qt::CaseInsensitive))
+        {
+            // This will give 4 strings = 1: lws 2: ID  3: Pin  4: State
+            cmd = commandNotChk.split(' ', Qt::SkipEmptyParts);
+
+            if (cmd.size() < 4)
+            {
+                QString errorMsg = "Command requires 3 parameters (ID, Pin, State)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                emit showErrorMessage("LedWiz - Set Pin State - Error", errorMsg);
+                return false;
+            }
+
+            cmd[1].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Set Pin State - Error", errorMsg);
+                return false;
+            }
+
+            cmd[2].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Set Pin State - Error", errorMsg);
+                return false;
+            }
+
+            // Good command
+            return true;
+        }
+        // LedWiz set power level command
+        else if (commandNotChk.startsWith(LWSETPOWER, Qt::CaseInsensitive))
+        {
+            // This will give 4 strings = 1: lwp 2: ID  3: Pin  4: Power Level
+            cmd = commandNotChk.split(' ', Qt::SkipEmptyParts);
+
+            if (cmd.size() < 4)
+            {
+                QString errorMsg = "Command requires 3 parameters (ID, Pin, Power Level)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                emit showErrorMessage("LedWiz - Set Power Level - Error", errorMsg);
+                return false;
+            }
+
+            cmd[1].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Set Power Level - Error", errorMsg);
+                return false;
+            }
+
+            cmd[2].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Set Power Level - Error", errorMsg);
+                return false;
+            }
+
+            cmd[3].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Power level is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPower Level: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Set Power Level - Error", errorMsg);
+                return false;
+            }
+
+            // Good command
+            return true;
+        }
+        // LedWiz set RGB LED color command
+        else if (commandNotChk.startsWith(LWSETCOLOR, Qt::CaseInsensitive))
+        {
+            // This will give 6 strings = 1: lwc 2: ID  3: Pin  4: Red Value  5: Green Value  6: Blue Value
+            cmd = commandNotChk.split(' ', Qt::SkipEmptyParts);
+
+            if (cmd.size() < 6)
+            {
+                QString errorMsg = "Command requires 5 parameters (ID, Pin, Red Value, Green Value, Blue Value)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
+                return false;
+            }
+
+            cmd[1].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
+                return false;
+            }
+
+            cmd[2].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
+                return false;
+            }
+
+            cmd[3].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Red value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nRed Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
+                return false;
+            }
+
+            cmd[4].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Green value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nGreen Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
+                return false;
+            }
+
+            cmd[5].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Blue value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nBlue Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
+                return false;
+            }
+
+            // Good command
+            return true;
+        }
+        // LedWiz set pulse rate
+        else if (commandNotChk.startsWith(LWSETPULSE, Qt::CaseInsensitive))
+        {
+            // This will give 3 strings = 1: lwr 2: ID  3: Pulse Rate
+            cmd = commandNotChk.split(' ', Qt::SkipEmptyParts);
+
+            if (cmd.size() < 3)
+            {
+                QString errorMsg = "Command requires 2 parameters (ID, Pulse Rate)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                emit showErrorMessage("LedWiz - Set Pulse Rate - Error", errorMsg);
+                return false;
+            }
+
+            cmd[1].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Set Pulse Rate - Error", errorMsg);
+                return false;
+            }
+
+            cmd[2].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Pulse rate is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPulse Rate: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Set Pulse Rate - Error", errorMsg);
+                return false;
+            }
+
+            // Good command
+            return true;
+        }
+        // LedWiz kill all LEDs command
+        else if (commandNotChk.startsWith(LWKILLALLLEDS, Qt::CaseInsensitive))
+        {
+            // This will give 2 strings = 1: lwk  2: ID
+            cmd = commandNotChk.split(' ', Qt::SkipEmptyParts);
+
+            if (cmd.size() < 2)
+            {
+                QString errorMsg = "Command requires 1 parameter (ID)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                emit showErrorMessage("LedWiz - Kill All LEDs - Error", errorMsg);
+                return false;
+            }
+
+            cmd[1].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice Number: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("LedWiz - Kill All LEDs - Error", errorMsg);
+                return false;
+            }
+
+            // Good command
+            return true;
+        }
+    }
     // PacDrive commands, starts with "ul"
     else if (commandNotChk.startsWith(PACCMDSTART, Qt::CaseInsensitive) == true)
     {
@@ -1239,6 +1521,67 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
             {
                 QString errorMsg = "Intensity value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nValue: " + cmd[3] + "\nFile: " + gameName + ENDOFINIFILE;
                 emit showErrorMessage("Ultimarc - Set LED Intensity - Error", errorMsg);
+                return false;
+            }
+
+            // Good command
+            return true;
+        }
+        // PacDrive set RGB LED color command
+        else if (commandNotChk.startsWith(PACSETCOLOR, Qt::CaseInsensitive))
+        {
+            // This will give 6 strings = 1: ulc 2: ID  3: Pin  4: Red Value  5: Green Value  6: Blue Value
+            cmd = commandNotChk.split(' ', Qt::SkipEmptyParts);
+
+            if (cmd.size() < 6)
+            {
+                QString errorMsg = "Command requires 5 parameters (ID, Pin, Red Value, Green Value, Blue Value)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                emit showErrorMessage("Ultimarc - Set RGB LED Color - Error", errorMsg);
+                return false;
+            }
+
+            cmd[1].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("Ultimarc - Set RGB LED Color - Error", errorMsg);
+                return false;
+            }
+
+            cmd[2].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("Ultimarc - Set RGB LED Color - Error", errorMsg);
+                return false;
+            }
+
+            cmd[3].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Red value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nRed Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("Ultimarc - Set RGB LED Color - Error", errorMsg);
+                return false;
+            }
+
+            cmd[4].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Green value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nGreen Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("Ultimarc - Set RGB LED Color - Error", errorMsg);
+                return false;
+            }
+
+            cmd[5].toUInt(&isNumber);
+
+            if (!isNumber)
+            {
+                QString errorMsg = "Blue value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nBlue Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                emit showErrorMessage("Ultimarc - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
 
@@ -1579,6 +1922,79 @@ void OutputHookerCore::executeINICommands(const QStringList &commands, const QSt
                 comPortWrite(comPortNumber, cmd[2]);
             }
         }
+        // LedWiz commands, starts with "lw"
+        else if (currentCommand.startsWith(LWCMDSTART, Qt::CaseInsensitive) == true)
+        {
+            // LedWiz set pin state command
+            if (currentCommand.startsWith(LWSETSTATE, Qt::CaseInsensitive))
+            {
+                // This will give 4 strings = 1: lws 2: ID  3: Pin  4: State
+                cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
+
+                if (cmd.size() >= 4)
+                {
+                    quint8 lwID = cmd[1].toUInt() - 1;
+                    quint8 lwPin = cmd[2].toUInt();
+                    bool lwState = (cmd[3].toUInt() > 0);
+                    setLedWizPinState(lwID, lwPin, lwState);
+                }
+            }
+            // LedWiz set power level command
+            else if (currentCommand.startsWith(LWSETPOWER, Qt::CaseInsensitive))
+            {
+                // This will give 4 strings = 1: lwp 2: ID  3: Pin  4: Power Level
+                cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
+
+                if (cmd.size() >= 4)
+                {
+                    quint8 lwID = cmd[1].toUInt() - 1;
+                    quint8 lwPin = cmd[2].toUInt();
+                    quint8 lwPower = cmd[3].toUInt();
+                    setLedWizPowerLevel(lwID, lwPin, lwPower);
+                }
+            }
+            // LedWiz set RGB LED color command
+            else if (currentCommand.startsWith(LWSETCOLOR, Qt::CaseInsensitive))
+            {
+                // This will give 6 strings = 1: lwc 2: ID  3: Pin  4: Red Value  5: Green Value  6: Blue Value
+                cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
+
+                if (cmd.size() >= 6)
+                {
+                    quint8 lwID = cmd[1].toUInt() - 1;
+                    quint8 lwPin = cmd[2].toUInt();
+                    quint8 lwValueR = cmd[3].toUInt();
+                    quint8 lwValueG = cmd[4].toUInt();
+                    quint8 lwValueB = cmd[5].toUInt();
+                    setLedWizRGBColor(lwID, lwPin, lwValueR, lwValueG, lwValueB);
+                }
+            }
+            // LedWiz set pulse rate command
+            else if (currentCommand.startsWith(LWSETPULSE, Qt::CaseInsensitive))
+            {
+                // This will give 4 strings = 1: lwr 2: ID  3: Pin  4: Pulse Rate
+                cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
+
+                if (cmd.size() >= 4)
+                {
+                    quint8 lwID = cmd[1].toUInt() - 1;
+                    quint8 lwPulse = cmd[2].toUInt();
+                    setLedWizPulseRate(lwID, lwPulse);
+                }
+            }
+            // LedWiz kill all LEDs command
+            else if (currentCommand.startsWith(LWKILLALLLEDS, Qt::CaseInsensitive))
+            {
+                // This will give 2 strings = 1: lwk  2: ID
+                cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
+
+                if (cmd.size() >= 2)
+                {
+                    quint8 lwID = cmd[1].toUInt() - 1;
+                    turnAllLedWizLightsOff(lwID);
+                }
+            }
+        }
         // PacDrive commands, starts with "ul"
         else if (currentCommand.startsWith(PACCMDSTART, Qt::CaseInsensitive) == true)
         {
@@ -1608,6 +2024,22 @@ void OutputHookerCore::executeINICommands(const QStringList &commands, const QSt
                     quint8 pacPin = cmd[2].toUInt() - 1;
                     quint8 pacIntensity = cmd[3].toUInt();
                     setPacDriveLightIntensity(pacID, pacPin, pacIntensity);
+                }
+            }
+            // PacDrive set RGB LED color command
+            else if (currentCommand.startsWith(LWSETCOLOR, Qt::CaseInsensitive))
+            {
+                // This will give 6 strings = 1: ulc 2: ID  3: Pin  4: Red Value  5: Green Value  6: Blue Value
+                cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
+
+                if (cmd.size() >= 6)
+                {
+                    quint8 pacID = cmd[1].toUInt() - 1;
+                    quint8 pacPin = cmd[2].toUInt() - 1;
+                    quint8 pacValueR = cmd[3].toUInt();
+                    quint8 pacValueG = cmd[4].toUInt();
+                    quint8 pacValueB = cmd[5].toUInt();
+                    setPacDriveRGBColor(pacID, pacPin, pacValueR, pacValueG, pacValueB);
                 }
             }
             // PacDrive kill all LEDs command
@@ -1701,22 +2133,58 @@ void OutputHookerCore::comPortWrite(quint8 cpNum, QString cpData)
     emit writeComPort(cpNum, cpBA);
 }
 
+// Set LedWiz pin state
+void OutputHookerCore::setLedWizPinState(quint8 lwID, quint8 lwPin, bool lwState)
+{
+    emit setLwPinState(lwID, lwPin, lwState);
+}
+
+// Set LedWiz power level
+void OutputHookerCore::setLedWizPowerLevel(quint8 lwID, quint8 lwPin, quint8 lwPower)
+{
+    emit setLwPowerLevel(lwID, lwPin, lwPower);
+}
+
+// Set LedWiz RGB LED color
+void OutputHookerCore::setLedWizRGBColor(quint8 lwID, quint8 lwPin, quint8 lwValueR, quint8 lwValueG, quint8 lwValueB)
+{
+    emit setLwRGBColor(lwID, lwPin, lwValueR, lwValueG, lwValueB);
+}
+
+// Set LedWiz pulse rate
+void OutputHookerCore::setLedWizPulseRate(quint8 lwID, quint8 lwPulse)
+{
+    emit setLwPulseRate(lwID, lwPulse);
+}
+
+// Turn all LedWiz lights off
+void OutputHookerCore::turnAllLedWizLightsOff(quint8 lwID)
+{
+    emit turnAllLwLightsOff(lwID);
+}
+
 // Set PacDrive pin state
 void OutputHookerCore::setPacDrivePinState(quint8 pacID, quint8 pacPin, bool pacState)
 {
-    emit setPinState(pacID, pacPin, pacState);
+    emit setPdPinState(pacID, pacPin, pacState);
 }
 
 // Set PacDrive light intensity
 void OutputHookerCore::setPacDriveLightIntensity(quint8 pacID, quint8 pacPin, quint8 pacIntensity)
 {
-    emit setLightIntensity(pacID, pacPin, pacIntensity);
+    emit setPdLightIntensity(pacID, pacPin, pacIntensity);
 }
 
-// Turn all PacDrive lights off based on INI file
+// Set PacDrive RGB LED color
+void OutputHookerCore::setPacDriveRGBColor(quint8 pacID, quint8 pacPin, quint8 pacValueR, quint8 pacValueG, quint8 pacValueB)
+{
+    emit setPdRGBColor(pacID, pacPin, pacValueR, pacValueG, pacValueB);
+}
+
+// Turn all PacDrive lights off
 void OutputHookerCore::turnAllPacDriveLightsOff(quint8 pacID)
 {
-    emit turnAllLightsOff(pacID);
+    emit turnAllPdLightsOff(pacID);
 }
 
 // Launch Application

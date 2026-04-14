@@ -18,6 +18,7 @@
 #include "TCPSocketModule.h"
 #include "WinMsgModule.h"
 #include "COMPortModule.h"
+#include "LedWizModule.h"
 #include "PacDriveModule.h"
 
 #include <windows.h>
@@ -31,7 +32,8 @@ class OutputHookerCore : public QObject
     QThread threadForWinMsg;
     QThread threadForTCPSocket;
     QThread threadForCOMPort;
-    QThread threadForLight;
+    QThread threadForLedWiz;
+    QThread threadForUltimarc;
 
     // Timer for KeyStates
     QTimer *keyStateTimer;
@@ -58,7 +60,7 @@ public:
 
 public slots:
     // Execute command from TestOutputWindow
-    void executeCommand(const FunctionCommand &cmd);
+    void executeTestCommand(const FunctionCommand &cmd);
 
     // Handle error message from a different thread
     void errorMessage(const QString &title, const QString &message);
@@ -91,14 +93,32 @@ signals:
     // Closes all open Serial COM ports
     void stopAllConnections();
 
+    // Set LedWiz pin state
+    void setLwPinState(const quint8 &lwID, const quint8 &lwPin, const bool &lwState);
+
+    // Set LedWiz power level
+    void setLwPowerLevel(const quint8 &lwID, const quint8 &lwPin, const quint8 &lwPower);
+
+    // Set LedWiz RGB LED color
+    void setLwRGBColor(const quint8 &lwID, const quint8 &lwPin, const quint8 &lwValueR, const quint8 &lwValueG, const quint8 &lwValueB);
+
+    // Set LedWiz pulse rate
+    void setLwPulseRate(const quint8 &lwID, const quint8 &lwPulse);
+
+    // Turn all LedWiz lights off
+    void turnAllLwLightsOff(const quint8 &lwID);
+
     // Set PacDrive pin state
-    void setPinState(const quint8 &pdID, const quint8 &pdPin, const bool &pdState);
+    void setPdPinState(const quint8 &pdID, const quint8 &pdPin, const bool &pdState);
 
     // Set PacDrive light intensity
-    void setLightIntensity(const quint8 &pdID, const quint8 &pdPin, const quint8 &pdIntensity);
+    void setPdLightIntensity(const quint8 &pdID, const quint8 &pdPin, const quint8 &pdIntensity);
+
+    // Set PacDrive RGB LED color
+    void setPdRGBColor(const quint8 &pdID, const quint8 &pdPin, const quint8 &pdValueR, const quint8 &pdValueG, const quint8 &pdValueB);
 
     // Turn all PacDrive lights off
-    void turnAllLightsOff(const quint8 &pdID);
+    void turnAllPdLightsOff(const quint8 &pdID);
 
     // Update the display data
     void noConnectedGame();
@@ -153,6 +173,9 @@ private:
     // Serial COM Port module
     COMPortModule *p_comPort;
 
+    // LedWiz module
+    LedWizModule *p_ledWiz;
+
     // PacDrive module
     PacDriveModule *p_pacDrive;
 
@@ -195,11 +218,29 @@ private:
     // Write to COM port
     void comPortWrite(quint8 cpNum, QString cpData);
 
+    // Set LedWiz pin state
+    void setLedWizPinState(quint8 lwID, quint8 lwPin, bool lwState);
+
+    // Set LedWiz power level
+    void setLedWizPowerLevel(quint8 lwID, quint8 lwPin, quint8 lwPower);
+
+    // Set LedWiz RGB LED color
+    void setLedWizRGBColor(quint8 lwID, quint8 lwPin, quint8 lwValueR, quint8 lwValueG, quint8 lwValueB);
+
+    // Set LedWiz pulse rate
+    void setLedWizPulseRate(quint8 lwID, quint8 lwPulse);
+
+    // Turn all LedWiz lights off
+    void turnAllLedWizLightsOff(quint8 lwID);
+
     // Set PacDrive pin state
     void setPacDrivePinState(quint8 pacID, quint8 pacPin, bool pacState);
 
     // Set PacDrive light intensity
     void setPacDriveLightIntensity(quint8 pacID, quint8 pacPin, quint8 pacIntensity);
+
+    // Set PacDrive RGB LED color
+    void setPacDriveRGBColor(quint8 pacID, quint8 pacPin, quint8 pacValueR, quint8 pacValueG, quint8 pacValueB);
 
     // Turn all PacDrive lights off
     void turnAllPacDriveLightsOff(quint8 pacID);
