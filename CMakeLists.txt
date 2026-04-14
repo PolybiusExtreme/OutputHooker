@@ -24,6 +24,7 @@ qt_add_executable(OutputHooker
     core/TCPSocketModule.h core/TCPSocketModule.cpp
     core/COMPortModule.h core/COMPortModule.cpp
     core/PacDriveModule.h core/PacDriveModule.cpp
+    core/LedWizModule.h core/LedWizModule.cpp
     gui/TestOutputWindow.h gui/TestOutputWindow.cpp gui/TestOutputWindow.ui
     gui/EditorWindow.h gui/EditorWindow.cpp gui/EditorWindow.ui
     gui/EditorAddCmdWindow.h gui/EditorAddCmdWindow.cpp gui/EditorAddCmdWindow.ui
@@ -45,11 +46,13 @@ target_include_directories(OutputHooker
     ${Qt6Network_INCLUDE_DIRS}
     ${Qt6Multimedia_INCLUDE_DIRS}
     C:/PacDriveSDK
+    C:/LEDWizSDK
 )
 
 target_link_directories(OutputHooker
     PRIVATE
     C:/PacDriveSDK
+    C:/LEDWizSDK
 )
 
 target_link_libraries(OutputHooker
