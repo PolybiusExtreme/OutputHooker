@@ -5,11 +5,6 @@
 #include <QList>
 #include <QMap>
 
-//Ultimarc PacDrive SDK
-#include "StdAfx.h"
-#include "Windows.h"
-#include "PacDrive.h"
-
 #include "../Global.h"
 
 class PacDriveModule : public QObject
@@ -30,6 +25,9 @@ public slots:
     // Set light intensity
     void setLightIntensity(quint8 id, quint8 pin, quint8 intensity);
 
+    // Set RGB LED color
+    void setRGBColor(quint8 id, quint8 pin, quint8 valueR, quint8 valueG, quint8 valueB);
+
     // Turn all lights on one board off
     void turnAllLightsOff(quint8 id);
 
@@ -38,7 +36,7 @@ signals:
     void showErrorMessage(const QString &title, const QString &message);
 
 public:
-    // Number of Ultimarc devices filtered
+    // Number of Ultimarc devices
     qint8 numberUltimarcDevices;
 
     // Number of Ultimarc devices that are valid

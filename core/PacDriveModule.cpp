@@ -1,5 +1,10 @@
 #include "PacDriveModule.h"
 
+//Ultimarc PacDrive SDK
+#include "StdAfx.h"
+#include "Windows.h"
+#include "PacDrive.h"
+
 PacDriveModule::PacDriveModule(QObject *parent)
     : QObject{parent}
 {
@@ -131,7 +136,7 @@ void PacDriveModule::collectUltimarcData()
                     int numGroupsToInit = numberGroups[i];
                     for (int g = 1; g <= numGroupsToInit; g++)
                     {
-                        Pac64SetLEDStates(i, g, 0xFF);
+                        Pac64SetLEDStates(i, g, 0x00);
                     }
 
                     BYTE initialIntensities[96] = {0};
@@ -240,6 +245,22 @@ void PacDriveModule::setLightIntensity(quint8 id, quint8 pin, quint8 intensity)
                 emit showErrorMessage("Write to Ultimarc Controller failed!", errorMsg);
             }
         }
+    }
+    else
+    {
+        QString errorMsg = "ID " + QString::number(id + 1) + " is not in the valid Ultimarc controller list!";
+        emit showErrorMessage("Invalid Ultimarc Controller ID!", errorMsg);
+    }
+}
+
+// Set RGB LED color
+void PacDriveModule::setRGBColor(quint8 id, quint8 pin, quint8 valueR, quint8 valueG, quint8 valueB)
+{
+    if (id < numberUltimarcDevices && dataUltimarc[id].valid)
+    {
+        setLightIntensity(id, pin,     valueR);
+        setLightIntensity(id, pin + 1, valueG);
+        setLightIntensity(id, pin + 2, valueB);
     }
     else
     {
