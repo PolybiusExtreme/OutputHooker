@@ -3,10 +3,12 @@
 
 #include <QObject>
 
+#include <windows.h>
+
 // Version info
-#define VERSION                 "1.1.0"
+#define VERSION                 "1.2.0"
 #define VERSIONMAIN             1
-#define VERSIONMID              1
+#define VERSIONMID              2
 #define VERSIONLAST             0
 
 // Settings
@@ -60,9 +62,16 @@
 #define PARITYREMOVE             0,7
 #define DATAREMOVE               0,5
 #define STOPREMOVE               0,5
+#define LWCMDSTART              "lw"
+#define LWSETSTATE              "lws"
+#define LWSETPOWER              "lwp"
+#define LWSETCOLOR              "lwc"
+#define LWSETPULSE              "lwr"
+#define LWKILLALLLEDS           "lwk"
 #define PACCMDSTART             "ul"
 #define PACSETSTATE             "uls"
 #define PACSETINTENSITY         "uli"
+#define PACSETCOLOR             "ulc"
 #define PACKILLALLLEDS          "ulk"
 #define APPCMDSTART             "ap"
 #define APPLAUNCH               "apl"
@@ -89,8 +98,14 @@ enum CommandType
     CmdGun4irRL,
     CmdGun4irRO,
     CmdGun4irFA,
+    CmdLedWizState,
+    CmdLedWizPower,
+    CmdLedWizColor,
+    CmdLedWizPulse,
+    CmdLedWizKill,
     CmdUltimarcState,
     CmdUltimarcIntensity,
+    CmdUltimarcColor,
     CmdUltimarcKill,
     CmdAppLaunch,
     CmdAppClose,
@@ -135,6 +150,25 @@ struct ComPortStruct
 };
 
 inline qint32 BAUDDATA_ARRAY[BAUD_NUMBER] = {115200, 57600, 38400, 19200, 9600, 4800, 2400, 1200};
+
+// LedWiz
+// 32 LED channels with 48 Brightness levels
+// A value of 1 to 48 sets the brightness of each LED using PWM
+// A value of 129-132 indicates an automated pulse mode as follows:
+// 129 = Ramp Up / Ramp Down
+// 130 = On / Off
+// 131 = On / Ramp Down
+// 132 = Ramp Up / On
+// The speed is controlled by the Global Pulse Speed parameter
+
+#define LEDWIZMAXDEVICES        16
+
+struct LedWizCache
+{
+    BYTE sbaBanks[4];
+    BYTE pbaLevels[32];
+    BYTE globalPulseSpeed;
+};
 
 // Ultimarc
 // PacDrive, U-HID, and Blue-HID: 16 LED channels with No brightness (0 - Off and 1 - On)
