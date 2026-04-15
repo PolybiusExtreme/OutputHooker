@@ -6,10 +6,10 @@
 #include <windows.h>
 
 // Version info
-#define VERSION                 "1.2.0"
+#define VERSION                 "1.2.1"
 #define VERSIONMAIN             1
 #define VERSIONMID              2
-#define VERSIONLAST             0
+#define VERSIONLAST             1
 
 // Settings
 #define SETTINGSFILE            "OutputHooker.ini"
