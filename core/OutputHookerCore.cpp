@@ -885,8 +885,8 @@ void OutputHookerCore::loadINIFile()
                 }
                 else if (isOutput)
                 {
-                    // Normal game outputs (save in lowercase)
-                    signalsAndCommands.insert(key.toLower(), tempSplit);
+                    // Normal game outputs
+                    signalsAndCommands.insert(key, tempSplit);
                 }
                 else
                 {
@@ -1806,7 +1806,7 @@ int OutputHookerCore::mapKeyNameToCode(const QString &name)
 void OutputHookerCore::processINICommands(QString signalName, QString value, bool isState)
 {
     QStringList commands;
-    QString searchName = signalName.toLower().trimmed();
+    QString searchName = signalName.trimmed();
 
     if (isState) {
         if (stateAndCommands.contains(searchName))
