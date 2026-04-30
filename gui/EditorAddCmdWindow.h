@@ -3,6 +3,8 @@
 
 #include <QDialog>
 #include <QFile>
+#include <QMouseEvent>
+#include <QColorDialog>
 #include <QIntValidator>
 #include <QAbstractItemView>
 
@@ -36,20 +38,39 @@ private slots:
     // On pushButton Cancel clicked
     void on_pushButtonCancel_clicked();
 
+protected:
+    // Event filter for Blamcon LED color setting
+    bool eventFilter(QObject *obj, QEvent *event) override;
+
 private:
     Ui::EditorAddCmdWindow *ui;
 
+    // Save the last selected category of the category ComboBox
+    static int lastSelectedCategory;
+
     // Save the last selected function of the function ComboBox
     static int lastSelectedFunction;
+
+    // Handle category ComboBox
+    void handleCategoryChanged(int index);
 
     // Handle function ComboBox
     void handleFunctionChanged(int index);
 
     // Setup functions in UI
     void setupComPortUI(CommandType cmd);
+    void setupBlamconUI(CommandType cmd);
+    void setupFusionUI(CommandType cmd);
     void setupGun4irUI(CommandType cmd);
+    void setupOpenFireUI(CommandType cmd);
+    void setupRsMX24UI(CommandType cmd);
+    void setupRsReaperUI(CommandType cmd);
+    void setupSindenUI(CommandType cmd);
+    void setupXgunnerUI(CommandType cmd);
     void setupLedWizUI(CommandType cmd);
     void setupUltimarcUI(CommandType cmd);
+    void setupTcpUI(CommandType cmd);
+    void setupUdpUI(CommandType cmd);
     void setupAppUI(CommandType cmd);
     void setupAudioUI();
 
@@ -58,7 +79,10 @@ private:
 
     // Validate different values for checkCommand
     bool validateComPortValues(const FunctionCommand &cmd);
+    bool validateStrengthPulseValue(const FunctionCommand &cmd);
     bool validateLedIntensityValue(const FunctionCommand &cmd);
+    bool validateLedFadeTimeValue(const FunctionCommand &cmd);
+    bool validateTcpUdpPort(const FunctionCommand &cmd);
     bool validateLaunchApp(const FunctionCommand &cmd);
     bool validateCloseApp(const FunctionCommand &cmd);
     bool validateWavAudioFile(const FunctionCommand &cmd);
@@ -77,6 +101,9 @@ private:
 
     // Validation 0-255
     QIntValidator* validator255;
+
+    // Validation 0-65535
+    QIntValidator* validator65535;
 };
 
 #endif // EDITORADDCMDWINDOW_H
