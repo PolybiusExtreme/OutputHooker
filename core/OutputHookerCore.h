@@ -20,6 +20,7 @@
 #include "COMPortModule.h"
 #include "LedWizModule.h"
 #include "PacDriveModule.h"
+#include "NetCmdModule.h"
 
 #include <windows.h>
 #include <shellapi.h>
@@ -34,6 +35,7 @@ class OutputHookerCore : public QObject
     QThread threadForCOMPort;
     QThread threadForLedWiz;
     QThread threadForUltimarc;
+    QThread threadForNetCmd;
 
     // Timer for KeyStates
     QTimer *keyStateTimer;
@@ -57,6 +59,9 @@ public:
 
     // Pass the HWND through from OutputHooker to WinMsgModule
     void setWinID(HWND handle);
+
+    // Execute command line commands
+    void executeCommandLineCommands(const QStringList &commands, const QString &value = "");
 
 public slots:
     // Execute command from TestOutputWindow
@@ -114,11 +119,26 @@ signals:
     // Set PacDrive light intensity
     void setPdLightIntensity(const quint8 &pdID, const quint8 &pdPin, const quint8 &pdIntensity);
 
+    // Set PacDrive light fade time
+    void setPdLightFadeTime(const quint8 &pdID, const quint8 &pdFadetime);
+
     // Set PacDrive RGB LED color
     void setPdRGBColor(const quint8 &pdID, const quint8 &pdPin, const quint8 &pdValueR, const quint8 &pdValueG, const quint8 &pdValueB);
 
     // Turn all PacDrive lights off
     void turnAllPdLightsOff(const quint8 &pdID);
+
+    // Connect to TCP host
+    void connectTcpHost(const quint8 &socket, const QString &host, quint16 port);
+
+    // Disconnect TCP host
+    void disconnectTcpHost(const quint8 &socket);
+
+    // Send TCP command
+    void sendTcpCommand(const quint8 &socket, const QByteArray &command);
+
+    // Send UDP command
+    void sendUdpCommand(const quint8 &type, const QString &address, quint16 port, const QString &command);
 
     // Update the display data
     void noConnectedGame();
@@ -167,7 +187,7 @@ private:
     // Windows message system module
     WinMsgModule *p_winMsg;
 
-    // TCP Socket module
+    // TCP socket module
     TCPSocketModule *p_tcpSocket;
 
     // Serial COM Port module
@@ -178,6 +198,12 @@ private:
 
     // PacDrive module
     PacDriveModule *p_pacDrive;
+
+    // Network command module
+    NetCmdModule *p_netCmd;
+
+    // QMap - COM Port placeholders
+    QMap<QString, QString> comPortPlaceholders;
 
     // Game found process
     void gameFound();
@@ -239,11 +265,26 @@ private:
     // Set PacDrive light intensity
     void setPacDriveLightIntensity(quint8 pacID, quint8 pacPin, quint8 pacIntensity);
 
+    // Set PacDrive light fade time
+    void setPacDriveLightFadeTime(quint8 pacID, quint8 pacFadetime);
+
     // Set PacDrive RGB LED color
     void setPacDriveRGBColor(quint8 pacID, quint8 pacPin, quint8 pacValueR, quint8 pacValueG, quint8 pacValueB);
 
     // Turn all PacDrive lights off
     void turnAllPacDriveLightsOff(quint8 pacID);
+
+    // TCP connect
+    void tcpConnect(quint8 socket, QString host, quint16 port);
+
+    // TCP disconnect
+    void tcpDisconnect(quint8 socket);
+
+    // Send TCP command
+    void tcpSendCommand(quint8 socket, QByteArray command);
+
+    // Send UDP command
+    void udpSendCommand(quint8 type, QString address, quint16 port, QString command);
 
     // Launch Application
     void launchApplication(QString executable, QString parameter, quint8 mode);
