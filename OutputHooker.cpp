@@ -98,8 +98,7 @@ OutputHooker::OutputHooker(QWidget *parent)
     // Disable menu entry "Edit ini file for current game"
     ui->actionEditCurrentGameINI->setEnabled(false);
 
-    // Signals and slots (used to display info on MainWindows)
-    // OutputHooker Core updates
+    // Signals and slots (used to display info on MainWindow)
     connect(p_core, &OutputHookerCore::noConnectedGame, this, &OutputHooker::displayNoGame);
     connect(p_core, &OutputHookerCore::connectedGame, this, &OutputHooker::displayGame);
     connect(p_core, &OutputHookerCore::connectedEmptyGame, this, &OutputHooker::displayEmptyGame);
@@ -113,6 +112,9 @@ OutputHooker::OutputHooker(QWidget *parent)
     // Start OutputHookerCore
     p_core->startCore();
     coreRunning = true;
+
+    // Initialize server for command line arguments
+    initServer();
 }
 
 OutputHooker::~OutputHooker()
@@ -120,6 +122,26 @@ OutputHooker::~OutputHooker()
     delete ui;
     delete p_config;
     delete p_core;
+}
+
+// Initialize server for command line arguments
+void OutputHooker::initServer()
+{
+    p_localServer = new QLocalServer(this);
+    QString serverName = "OutputHooker_CommandLine_Server";
+
+    QLocalServer::removeServer(serverName);
+
+    if (p_localServer->listen(serverName))
+    {
+        connect(p_localServer, &QLocalServer::newConnection, this, &OutputHooker::onNewConnection);
+    }
+}
+
+// Process command line arguments
+void OutputHooker::processCommandLineArgs(const QStringList &args)
+{
+    p_core->executeCommandLineCommands(args);
 }
 
 // Disable the Task Icon Menu - Open OutputHooker
@@ -226,6 +248,32 @@ void OutputHooker::updateConnectionStatus(OutputHookerCore::ConnectionType type,
 void OutputHooker::errorMessage(const QString title, const QString message)
 {
     GuiUtilities::showMessageBoxCentered(this, title, message, QMessageBox::Critical);
+}
+
+// Process new connection (needed for command line arguments)
+void OutputHooker::onNewConnection()
+{
+    QLocalSocket *clientSocket = p_localServer->nextPendingConnection();
+    connect(clientSocket, &QLocalSocket::readyRead, this, &OutputHooker::readSocket);
+    connect(clientSocket, &QLocalSocket::disconnected, clientSocket, &QLocalSocket::deleteLater);
+}
+
+// Read data (command line arguments) from socket
+void OutputHooker::readSocket()
+{
+    QLocalSocket *socket = qobject_cast<QLocalSocket*>(sender());
+
+    if (!socket)
+        return;
+
+    QDataStream in(socket);
+    QStringList args;
+    in >> args;
+
+    if (!args.isEmpty())
+    {
+        this->processCommandLineArgs(args);
+    }
 }
 
 // Open TestOutputWindow
