@@ -212,12 +212,55 @@ void EditorWindow::on_actionCommand_triggered()
 
         switch(res.type)
         {
+        case CmdBlamconIGF:
+            // [Command] [Parameter1] [Parameter2] [Parameter3] [Parameter4] [Parameter5]
+            finalString = res.commandCode + " " + res.param1 + " ";
+            if (!res.param2.isEmpty()) parts << res.param2;
+            if (!res.param3.isEmpty()) parts << res.param3;
+            if (!res.param4.isEmpty()) parts << res.param4;
+            if (!res.param5.isEmpty()) parts << res.param5;
+            finalString += parts.join(".");
+            break;
+
+        case CmdFusionIGF:
+        case CmdGun4irIGF:
+        case CmdOpenFirePO:
+        case CmdOpenFireIGF:
+            // [Command] [Parameter1] [Parameter2] [Parameter3] [Parameter4]
+            finalString = res.commandCode + " " + res.param1 + " ";
+            if (!res.param2.isEmpty()) parts << res.param2;
+            if (!res.param3.isEmpty()) parts << res.param3;
+            if (!res.param4.isEmpty()) parts << res.param4;
+            finalString += parts.join("x");
+            break;
+
         case CmdAppLaunch:
+            // [Command] [Parameter1] [Parameter2] [Parameter3]
             if (!res.commandCode.isEmpty()) parts << res.commandCode;
             if (!res.param1.isEmpty())      parts << res.param1;
             if (!res.param2.isEmpty())      parts << res.param2;
             if (!res.param3.isEmpty())      parts << res.param3;
             finalString = parts.join(" ");
+            break;
+
+        case CmdRsReaperIGF:
+            // [Command] [Parameter1] [Parameter2] [Parameter3]
+            finalString = res.commandCode + " " + res.param1 + " ";
+            if (!res.param2.isEmpty()) parts << res.param2;
+            if (!res.param3.isEmpty()) parts << res.param3;
+            finalString += parts.join("");
+            break;
+
+        case CmdSindenIGF:
+        case CmdSindenRM:
+        case CmdSindenAP:
+        case CmdSindenSS:
+            // [Command] [Parameter1] [Parameter2] [Parameter3] [Parameter4]
+            finalString = res.commandCode + " " + res.param1 + " ";
+            if (!res.param2.isEmpty()) parts << res.param2;
+            if (!res.param3.isEmpty()) parts << res.param3;
+            if (!res.param4.isEmpty()) parts << res.param4;
+            finalString += parts.join("");
             break;
 
         case CmdLedWizColor:
@@ -226,17 +269,40 @@ void EditorWindow::on_actionCommand_triggered()
             finalString = QString("%1 %2 %3 %4 %5 %6").arg(res.commandCode, res.param1, res.param2, res.param3, res.param4, res.param5);
             break;
 
+        case CmdUdpSend:
+            // [Command] [Parameter1] [Parameter2] [Parameter3] [Parameter4]
+            finalString = QString("%1 %2 %3 %4 %5").arg(res.commandCode, res.param1, res.param2, res.param3, res.param4);
+            break;
+
+        case CmdSindenTSC:
         case CmdLedWizState:
         case CmdLedWizPower:
         case CmdUltimarcIntensity:
         case CmdUltimarcState:
+        case CmdTcpConnect:
             // [Command] [Parameter1] [Parameter2] [Parameter3]
             finalString = QString("%1 %2 %3 %4").arg(res.commandCode, res.param1, res.param2, res.param3);
             break;
 
-        case CmdComWrite:
         case CmdComOpen:
+        case CmdComWrite:
         case CmdComSet:
+        case CmdBlamconCPO:
+        case CmdBlamconSSM:
+        case CmdBlamconESM:
+        case CmdBlamconIM:
+        case CmdBlamconOR:
+        case CmdBlamconPM:
+        case CmdBlamconAR:
+        case CmdBlamconRM:
+        case CmdBlamconCP:
+        case CmdFusionCPO:
+        case CmdFusionSSM:
+        case CmdFusionESM:
+        case CmdFusionFM:
+        case CmdFusionJM:
+        case CmdFusionPM:
+        case CmdGun4irCPO:
         case CmdGun4irSSM:
         case CmdGun4irESM:
         case CmdGun4irIM:
@@ -247,19 +313,53 @@ void EditorWindow::on_actionCommand_triggered()
         case CmdGun4irRL:
         case CmdGun4irRO:
         case CmdGun4irFA:
+        case CmdOpenFireCPO:
+        case CmdOpenFireSSM:
+        case CmdOpenFireESM:
+        case CmdOpenFireIM:
+        case CmdOpenFireOR:
+        case CmdOpenFirePM:
+        case CmdOpenFireAR:
+        case CmdOpenFireRO:
+        case CmdOpenFireFA:
+        case CmdOpenFireDM:
+        case CmdRsMX24CPO:
+        case CmdRsMX24SSM:
+        case CmdRsMX24ESM:
+        case CmdRsMX24SCM:
+        case CmdRsMX24IGF:
+        case CmdRsReaperCPO:
+        case CmdRsReaperSSM:
+        case CmdRsReaperESM:
+        case CmdRsReaperIM:
+        case CmdRsReaperOR:
+        case CmdRsReaperAR:
+        case CmdRsReaperLA:
+        case CmdXgunnerCPO:
+        case CmdXgunnerSSM:
+        case CmdXgunnerESM:
+        case CmdXgunnerIM:
+        case CmdXgunnerAR:
+        case CmdXgunnerIGF:
         case CmdLedWizPulse:
+        case CmdUltimarcFadeTime:
+        case CmdTcpSend:
             // [Command] [Parameter1] [Parameter2]
             finalString = QString("%1 %2 %3").arg(res.commandCode, res.param1, res.param2);
             break;
 
-        case CmdGun4irIGF:
-            // [Parameter1] [Parameter2] [Parameter3]
-            finalString = QString("%1x%2x%3").arg(res.param1, res.param2, res.param3);
-            break;
-
         case CmdComClose:
+        case CmdBlamconCPC:
+        case CmdFusionCPC:
+        case CmdGun4irCPC:
+        case CmdOpenFireCPC:
+        case CmdRsMX24CPC:
+        case CmdRsReaperCPC:
+        case CmdSindenTSD:
+        case CmdXgunnerCPC:
         case CmdLedWizKill:
         case CmdUltimarcKill:
+        case CmdTcpDisconnect:
         case CmdAppClose:
         case CmdPlayWav:
             // [Command] [Parameter1]
