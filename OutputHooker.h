@@ -7,6 +7,8 @@
 #include <QSystemTrayIcon>
 #include <QFileDialog>
 #include <QCloseEvent>
+#include <QLocalServer>
+#include <QLocalSocket>
 
 #include "gui/TestOutputWindow.h"
 #include "gui/EditorWindow.h"
@@ -28,6 +30,12 @@ class OutputHooker : public QMainWindow
 public:
     OutputHooker(QWidget *parent = nullptr);
     ~OutputHooker();
+
+    // Initialize server for command line arguments
+    void initServer();
+
+    // Process command line arguments
+    void processCommandLineArgs(const QStringList &args);
 
     // Disable the Task Icon Menu - Open OutputHooker
     void setVisible(bool visible) override;
@@ -61,6 +69,12 @@ public slots:
     void errorMessage(const QString title, const QString message);
 
 private slots:
+    // Process new connection (needed for command line arguments)
+    void onNewConnection();
+
+    // Read data (command line arguments) from socket
+    void readSocket();
+
     // Open TestOutputWindow
     void on_actionTestOutputs_triggered();
 
@@ -104,6 +118,9 @@ private:
 
     // Display the display data in the textBrowser
     void displayText();
+
+    // Local server for command line arguments
+    QLocalServer *p_localServer;
 
     // QPointer - OutputHooker Core
     OutputHookerCore *p_core;
