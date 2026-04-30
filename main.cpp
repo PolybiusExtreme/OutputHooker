@@ -30,12 +30,45 @@ int main(int argc, char *argv[])
 
     if(!isRunning)
     {
-        QApplication::setStyle(QStyleFactory::create("Fusion"));
-        OutputHooker w;
-        return a.exec();
+        if (argc > 1)
+        {
+            OutputHooker w;
+            QStringList args;
+            for (int i = 1; i < argc; ++i)
+            {
+                args << QString::fromLocal8Bit(argv[i]);
+            }
+            w.processCommandLineArgs(args);
+            QTimer::singleShot(500, &a, &QCoreApplication::quit);
+            return a.exec();
+        }
+        else
+        {
+            QApplication::setStyle(QStyleFactory::create("Fusion"));
+            OutputHooker w;
+            return a.exec();
+        }
     }
     else
     {
-        return 1;
+        if (argc > 1)
+        {
+            QLocalSocket socket;
+            socket.connectToServer("OutputHooker_CommandLine_Server");
+            if (socket.waitForConnected(1000))
+            {
+                QStringList args;
+                for (int i = 1; i < argc; ++i)
+                {
+                    args << QString::fromLocal8Bit(argv[i]);
+                }
+
+                QDataStream out(&socket);
+                out << args;
+                socket.waitForBytesWritten(1000);
+                socket.disconnectFromServer();
+            }
+        }
+        return 0;
     }
 }
