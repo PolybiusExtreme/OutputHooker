@@ -253,6 +253,37 @@ void PacDriveModule::setLightIntensity(quint8 id, quint8 pin, quint8 intensity)
     }
 }
 
+// Set light fade time
+void PacDriveModule::setLightFadeTime(quint8 id, quint8 fadetime)
+{
+    if (id < numberUltimarcDevices && dataUltimarc[id].valid)
+    {
+        if (dataUltimarc[id].type >= NANOLED && dataUltimarc[id].type <= IPACULTIMATEIO)
+        {
+            bool writePass = false;
+            quint8 writeCount = 0;
+
+            do
+            {
+                writePass = Pac64SetLEDFadeTime(id, fadetime);
+                writeCount++;
+            }
+            while (!writePass && writeCount < WRITERETRYATTEMPTS + 1);
+
+            if (!writePass)
+            {
+                QString errorMsg = "Write to Ultimarc Controller with ID " + QString::number(id + 1) + " failed after 3 write attempts!";
+                emit showErrorMessage("Write to Ultimarc Controller failed!", errorMsg);
+            }
+        }
+    }
+    else
+    {
+        QString errorMsg = "ID " + QString::number(id + 1) + " is not in the valid Ultimarc controller list!";
+        emit showErrorMessage("Invalid Ultimarc Controller ID!", errorMsg);
+    }
+}
+
 // Set RGB LED color
 void PacDriveModule::setRGBColor(quint8 id, quint8 pin, quint8 valueR, quint8 valueG, quint8 valueB)
 {
