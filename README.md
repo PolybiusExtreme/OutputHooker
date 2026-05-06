@@ -62,7 +62,7 @@ and the Ultimarc PacDrive SDK for the LED boards.
 - Howard Casto (MAMEHooker & MAME Interop SDK developer)  
 - Ben Baker (MAME Interop SDK & Ultimarc SDK developer)  
 - Aaron Giles (MAME output code developer)
-- 6Bolt (Hook of the Reaper developer)
+- 6Bolt ([Hook of the Reaper](https://github.com/6Bolt/Hook-Of-The-Reaper) developer)
 
 ***
 **Copyright &copy; 2026 by PolybiusExtreme**
