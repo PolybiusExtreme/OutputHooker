@@ -38,10 +38,7 @@ This tool acts as the essential bridge between emulators and your arcade hardwar
 ## Support
 See the [Wiki](https://github.com/PolybiusExtreme/OutputHooker/wiki) for detailed instructions.  
 Due to time constraints, I cannot offer any support.  
-I am just one man that wanted to build a modern MAMEHooker alternative for my selfmade Arcade machine.  
-
-If you want to support me:  
-<a href='https://ko-fi.com/Z8Z81WBS7F' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi3.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+I am just one man that wanted to build a modern MAMEHooker alternative for my selfmade Arcade machine.
 
 ## Contributing
 If you have suggestions, bug reports, or want to contribute to the code, feel free to open an [issue](https://github.com/PolybiusExtreme/OutputHooker/issues) or submit a [pull request](https://github.com/PolybiusExtreme/OutputHooker/pulls).
@@ -62,7 +59,7 @@ and the Ultimarc PacDrive SDK for the LED boards.
 - Howard Casto (MAMEHooker & MAME Interop SDK developer)  
 - Ben Baker (MAME Interop SDK & Ultimarc SDK developer)  
 - Aaron Giles (MAME output code developer)
-- 6Bolt ([Hook of the Reaper](https://github.com/6Bolt/Hook-Of-The-Reaper) developer)
+- 6Bolt ([Hook of the Reaper](https://hotr.6bolt.com/) developer)
 
 ***
 **Copyright &copy; 2026 by PolybiusExtreme**
