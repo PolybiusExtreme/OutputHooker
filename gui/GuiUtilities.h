@@ -1,3 +1,9 @@
+/*
+ * Original Copyright (c) 2026 PolybiusExtreme
+ *
+ * Licensed under the GNU GPLv3.
+ */
+
 #ifndef GUIUTILITIES_H
 #define GUIUTILITIES_H
 
