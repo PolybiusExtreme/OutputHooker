@@ -1,3 +1,10 @@
+/*
+ * Original Copyright (c) 2026 PolybiusExtreme
+ * Portions Copyright (c) 2026 6Bolt
+ *
+ * Licensed under the GNU GPLv3.
+ */
+
 #ifndef PACDRIVEMODULE_H
 #define PACDRIVEMODULE_H
 
@@ -15,10 +22,10 @@ public:
     explicit PacDriveModule(QObject *parent = nullptr);
     ~PacDriveModule();
 
+public slots:
     // Collect Ultimarc data
     void collectUltimarcData();
 
-public slots:
     // Set pin state
     void setPinState(quint8 id, quint8 pin, bool state);
 
@@ -35,6 +42,9 @@ public slots:
     void turnAllLightsOff(quint8 id);
 
 signals:
+    // Send Ultimarc device list to DeviceWindow
+    void ultimarcDeviceList(const QList<UltimarcData> &devices);
+
     // Show error message in main thread
     void showErrorMessage(const QString &title, const QString &message);
 
