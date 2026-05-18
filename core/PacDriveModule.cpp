@@ -1,3 +1,10 @@
+/*
+ * Original Copyright (c) 2026 PolybiusExtreme
+ * Portions Copyright (c) 2026 6Bolt
+ *
+ * Licensed under the GNU GPLv3.
+ */
+
 #include "PacDriveModule.h"
 
 //Ultimarc PacDrive SDK
@@ -5,11 +12,18 @@
 #include "Windows.h"
 #include "PacDrive.h"
 
+static PacDriveModule* g_pPacDriveInstance = nullptr;
+
+void __stdcall OnDeviceAttached(int id);
+void __stdcall OnDeviceRemoved(int id);
+
 PacDriveModule::PacDriveModule(QObject *parent)
     : QObject{parent}
 {
-    // Initialize Ultimarc controllers
-    numberUltimarcDevices = PacInitialize();
+    g_pPacDriveInstance = this;
+
+    // Register callbacks
+    PacSetCallbacks(OnDeviceAttached, OnDeviceRemoved);
 
     // Collect Ultimarc data
     collectUltimarcData();
@@ -20,6 +34,11 @@ PacDriveModule::PacDriveModule(QObject *parent)
 
 PacDriveModule::~PacDriveModule()
 {
+    g_pPacDriveInstance = nullptr;
+
+    // Deregister callbacks
+    PacSetCallbacks(nullptr, nullptr);
+
     // Turn the lights on all boards off
     turnLightsOnAllBoardsOff();
 
@@ -30,8 +49,22 @@ PacDriveModule::~PacDriveModule()
 // Collect Ultimarc data
 void PacDriveModule::collectUltimarcData()
 {
+    // Initialize Ultimarc controllers
+    numberUltimarcDevices = PacInitialize();
+
     if (numberUltimarcDevices > 0)
     {
+        numberPins.clear();
+        numberGroups.clear();
+        lightStateMap.clear();
+        lightIntensityMap.clear();
+        groupStateData.clear();
+
+        for (int i = 0; i < ULTIMARCMAXDEVICES; i++)
+        {
+            dataUltimarc[i].valid = false;
+        }
+
         quint8 i, j;
         PWCHAR buffer = new wchar_t[256];
         numberUltimarcDevicesValid = 0;
@@ -164,6 +197,15 @@ void PacDriveModule::collectUltimarcData()
         }
         delete[] buffer;
     }
+    QList<UltimarcData> validDevices;
+    for (int i = 0; i < numberUltimarcDevices; i++)
+    {
+        if (dataUltimarc[i].valid)
+        {
+            validDevices.append(dataUltimarc[i]);
+        }
+    }
+    emit ultimarcDeviceList(validDevices);
 }
 
 // Set pin state
@@ -345,5 +387,23 @@ void PacDriveModule::turnLightsOnAllBoardsOff()
         {
             turnAllLightsOff(i);
         }
+    }
+}
+
+// PacDrive callback - device attached
+void __stdcall OnDeviceAttached(int id)
+{
+    if (g_pPacDriveInstance)
+    {
+        g_pPacDriveInstance->collectUltimarcData();
+    }
+}
+
+// PacDrive callback - device removed
+void __stdcall OnDeviceRemoved(int id)
+{
+    if (g_pPacDriveInstance)
+    {
+        g_pPacDriveInstance->collectUltimarcData();
     }
 }
