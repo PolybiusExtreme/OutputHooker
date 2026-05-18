@@ -1,3 +1,10 @@
+/*
+ * Original Copyright (c) 2026 PolybiusExtreme
+ * Portions Copyright (c) 2026 6Bolt
+ *
+ * Licensed under the GNU GPLv3.
+ */
+
 #include "OutputHooker.h"
 
 #include <QApplication>
