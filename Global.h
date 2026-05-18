@@ -1,3 +1,10 @@
+/*
+ * Original Copyright (c) 2026 PolybiusExtreme
+ * Portions Copyright (c) 2026 6Bolt
+ *
+ * Licensed under the GNU GPLv3.
+ */
+
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
@@ -6,9 +13,9 @@
 #include <windows.h>
 
 // Version info
-#define VERSION                 "1.3.0"
+#define VERSION                 "1.4.0"
 #define VERSIONMAIN             1
-#define VERSIONMID              3
+#define VERSIONMID              4
 #define VERSIONLAST             0
 
 // Settings
@@ -74,6 +81,10 @@
 #define PACSETFADETIME          "ulf"
 #define PACSETCOLOR             "ulc"
 #define PACKILLALLLEDS          "ulk"
+#define FFBCMDSTART             "ff"
+#define SDL3FFB                 "ffb"
+#define SDL3FFA                 "ffa"
+#define USBHIDCMD               "ghd"
 #define TCPCMDSTART             "ts"
 #define TCPSOCKETCONNECT        "tsc"
 #define TCPSOCKETDISCONNECT     "tsd"
@@ -98,8 +109,11 @@ enum CategoryType
     CatRsReaper,
     CatSinden,
     CatXgunner,
+    CatAlien,
     CatLedWiz,
     CatUltimarc,
+    CatSDL3FFB,
+    CatUsbHid,
     CatNetwork,
     CatApplication,
     CatAudio,
@@ -113,7 +127,7 @@ enum CommandType
     CmdComClose,
     CmdComWrite,
     CmdComSet,
-    // Blamcon
+    // Blamcon Lightgun
     CmdBlamconCPO,
     CmdBlamconCPC,
     CmdBlamconSSM,
@@ -125,7 +139,7 @@ enum CommandType
     CmdBlamconRM,
     CmdBlamconCP,
     CmdBlamconIGF,
-    // Fusion
+    // Fusion Lightgun
     CmdFusionCPO,
     CmdFusionCPC,
     CmdFusionSSM,
@@ -134,7 +148,7 @@ enum CommandType
     CmdFusionJM,
     CmdFusionPM,
     CmdFusionIGF,
-    // GUN4IR
+    // GUN4IR Lightgun
     CmdGun4irCPO,
     CmdGun4irCPC,
     CmdGun4irSSM,
@@ -148,7 +162,7 @@ enum CommandType
     CmdGun4irRO,
     CmdGun4irFA,
     CmdGun4irIGF,
-    // OpenFIRE
+    // OpenFIRE Lightgun
     CmdOpenFireCPO,
     CmdOpenFireCPC,
     CmdOpenFireSSM,
@@ -162,14 +176,14 @@ enum CommandType
     CmdOpenFireDM,
     CmdOpenFirePO,
     CmdOpenFireIGF,
-    // Retro Shooter MX24
+    // Retro Shooter MX24 Lightgun
     CmdRsMX24CPO,
     CmdRsMX24CPC,
     CmdRsMX24SSM,
     CmdRsMX24ESM,
     CmdRsMX24SCM,
     CmdRsMX24IGF,
-    // Retro Shooter Reaper
+    // Retro Shooter RS3 Reaper Lightgun
     CmdRsReaperCPO,
     CmdRsReaperCPC,
     CmdRsReaperSSM,
@@ -179,14 +193,14 @@ enum CommandType
     CmdRsReaperAR,
     CmdRsReaperLA,
     CmdRsReaperIGF,
-    // Sinden
+    // Sinden Lightgun
     CmdSindenTSC,
     CmdSindenTSD,
     CmdSindenIGF,
     CmdSindenRM,
     CmdSindenAP,
     CmdSindenSS,
-    // X-Gunner
+    // X-Gunner Lightgun
     CmdXgunnerCPO,
     CmdXgunnerCPC,
     CmdXgunnerSSM,
@@ -194,6 +208,10 @@ enum CommandType
     CmdXgunnerIM,
     CmdXgunnerAR,
     CmdXgunnerIGF,
+    // Alien Positional Gun
+    CmdAlienLED,
+    CmdAlienRecoil,
+    CmdAlienCounter,
     // LEDWiz
     CmdLedWizState,
     CmdLedWizPower,
@@ -206,6 +224,11 @@ enum CommandType
     CmdUltimarcFadeTime,
     CmdUltimarcColor,
     CmdUltimarcKill,
+    // SDL3 Force Feedback
+    CmdSDL3FFB,
+    CmdSDL3FFA,
+    // Generic HID
+    CmdUsbHidSend,
     // Network (TCP/UDP)
     CmdTcpConnect,
     CmdTcpDisconnect,
@@ -248,6 +271,12 @@ struct FunctionCommand
 #define DATABITS_MAX            8
 #define DATABITS_MIN            5
 
+struct ComPortData
+{
+    QString portName;
+    QString description;
+};
+
 struct ComPortStruct
 {
     qint32 baud;
@@ -257,6 +286,44 @@ struct ComPortStruct
 };
 
 inline qint32 BAUDDATA_ARRAY[BAUD_NUMBER] = {115200, 57600, 38400, 19200, 9600, 4800, 2400, 1200};
+
+// USB HID
+#define MAXPLAYERS              4
+#define FRONTPATHREM            26
+
+struct HIDInfo
+{
+    QString     path;
+    QString     displayPath;
+    quint16     vendorID;
+    QString     vendorIDString;
+    quint16     productID;
+    QString     productIDString;
+    QString     serialNumber;
+    quint16     releaseNumber;
+    QString     releaseString;
+    QString     manufacturer;
+    QString     productDiscription;
+    quint16     usagePage;
+    quint16     usage;
+    QString     usageString;
+    qint8       interfaceNumber;
+
+    bool operator==(const HIDInfo& other) const
+    {
+        return (path == other.path) && (displayPath == other.displayPath) && (vendorID == other.vendorID) && (vendorIDString == other.vendorIDString)
+        && (productID == other.productID) && (productIDString == other.productIDString) && (serialNumber == other.serialNumber) && (releaseNumber == other.releaseNumber)
+            && (releaseString == other.releaseString)  && (manufacturer == other.manufacturer) && (productDiscription == other.productDiscription)
+            && (usagePage == other.usagePage) && (usage == other.usage) && (usageString == other.usageString) && (interfaceNumber == other.interfaceNumber);
+    }
+};
+
+// SDL3
+struct SdlCtrlData
+{
+    int id;
+    QString name;
+};
 
 // LedWiz
 // 32 LED channels with 48 Brightness levels
@@ -269,6 +336,13 @@ inline qint32 BAUDDATA_ARRAY[BAUD_NUMBER] = {115200, 57600, 38400, 19200, 9600, 
 // The speed is controlled by the Global Pulse Speed parameter
 
 #define LEDWIZMAXDEVICES        16
+
+struct LedWizData
+{
+    int id;
+    int type;
+    QString name;
+};
 
 struct LedWizCache
 {
