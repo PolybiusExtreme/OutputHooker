@@ -1,8 +1,18 @@
+/*
+ * Original Copyright (c) 2026 PolybiusExtreme
+ * Portions Copyright (c) 2026 6Bolt
+ *
+ * Licensed under the GNU GPLv3.
+ */
+
 #include "OutputHooker.h"
 #include "ui_OutputHooker.h"
 
 #include "Global.h"
 #include "gui/GuiUtilities.h"
+
+#include <windows.h>
+#include <dbt.h>
 
 OutputHooker::OutputHooker(QWidget *parent)
     : QMainWindow(parent)
@@ -34,7 +44,7 @@ OutputHooker::OutputHooker(QWidget *parent)
     // Creates the OutputHookerCore and gives pointer address of the OutputHookerConfig
     p_core = new OutputHookerCore(p_config, this);
 
-    // HWND is passed from here to WindowsMessage via the OutputHookerCore
+    // HWND is passed from here to LedWizModule & WinMsgModule via the OutputHookerCore
     p_core->setWinID((HWND)this->winId());
 
     // Set Tray Icon and show it
@@ -54,17 +64,17 @@ OutputHooker::OutputHooker(QWidget *parent)
     });
     trayIconMenu->addAction(restoreAction);
     trayIconMenu->addSeparator();
-    testOutputAction = new QAction("Test Outputs", this);
-    // testOutputAction->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::MediaPlaybackStart));
+    connectedDevicesAction = new QAction("Connected Device(s)", this);
+    connect(connectedDevicesAction, &QAction::triggered, this, &OutputHooker::on_actionConnected_Devices_triggered);
+    trayIconMenu->addAction(connectedDevicesAction);
+    testOutputAction = new QAction("Test Output(s)", this);
     connect(testOutputAction, &QAction::triggered, this, &OutputHooker::on_actionTestOutputs_triggered);
     trayIconMenu->addAction(testOutputAction);
     scriptEditorAction = new QAction("Script Editor", this);
-    // scriptEditorAction->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::MailMessageNew));
     connect(scriptEditorAction, &QAction::triggered, this, &OutputHooker::on_actionEditSpecificGameINI_triggered);
     trayIconMenu->addAction(scriptEditorAction);
     trayIconMenu->addSeparator();
     quitAction = new QAction("Quit", this);
-    // quitAction->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditClear));
     connect(quitAction, &QAction::triggered, this, &QApplication::quit);
     trayIconMenu->addAction(quitAction);
     trayIcon->setContextMenu(trayIconMenu);
@@ -276,15 +286,36 @@ void OutputHooker::readSocket()
     }
 }
 
+// Open DeviceWindow
+void OutputHooker::on_actionConnected_Devices_triggered()
+{
+    if (isTCPConnected || isWinMsgConnected)
+    {
+        GuiUtilities::showMessageBoxCentered(this, "Error!", "Close the game or emulator, to show the connected device(s)!", QMessageBox::Critical);
+        return;
+    }
+    else if (!p_deviceWindow)
+    {
+        p_deviceWindow = new DeviceWindow(this);
+        connect(p_core, &OutputHookerCore::ledWizDeviceList, p_deviceWindow, &DeviceWindow::updateLedWizList);
+        connect(p_core, &OutputHookerCore::ultimarcDeviceList, p_deviceWindow, &DeviceWindow::updateUltimarcList);
+        connect(p_core, &OutputHookerCore::sdlDeviceList, p_deviceWindow, &DeviceWindow::updateSdlList);
+        QMetaObject::invokeMethod(p_core->getLedWizModule(), "collectLedWizData", Qt::QueuedConnection);
+        QMetaObject::invokeMethod(p_core->getPacDriveModule(), "collectUltimarcData", Qt::QueuedConnection);
+        QMetaObject::invokeMethod(p_core->getSdlCtrlModule(), "collectSdlData", Qt::QueuedConnection);
+    }
+    p_deviceWindow->exec();
+}
+
 // Open TestOutputWindow
 void OutputHooker::on_actionTestOutputs_triggered()
 {
     if (isTCPConnected || isWinMsgConnected)
     {
-        GuiUtilities::showMessageBoxCentered(this, "Error", "Close the game or emulator, to test the output(s)!", QMessageBox::Critical);
+        GuiUtilities::showMessageBoxCentered(this, "Error!", "Close the game or emulator, to test the output(s)!", QMessageBox::Critical);
         return;
     }
-    else if (!p_editorWindow)
+    else if (!p_testOutputWindow)
     {
         testOutputAction->setEnabled(false);
         p_testOutputWindow = new TestOutputWindow(this);
@@ -476,6 +507,32 @@ void OutputHooker::on_actionAboutWindow_triggered()
 {
     p_aboutWindow = new AboutWindow(this);
     p_aboutWindow->exec();
+}
+
+// Device connect or disconnect event
+bool OutputHooker::nativeEvent(const QByteArray &eventType, void *message, qintptr *result)
+{
+    MSG *msg = static_cast<MSG *>(message);
+
+    if (msg->message == WM_DEVICECHANGE)
+    {
+        // DBT_DEVICEARRIVAL: Device connected
+        // DBT_DEVICEREMOVECOMPLETE: Device disconnected
+        if (msg->wParam == DBT_DEVICEARRIVAL || msg->wParam == DBT_DEVICEREMOVECOMPLETE)
+        {
+            if (p_deviceWindow)
+            {
+                QTimer::singleShot(100, p_deviceWindow, &DeviceWindow::checkComPorts);
+            }
+
+            if (p_core)
+            {
+                p_core->refreshLwDevices();
+            }
+        }
+    }
+
+    return QMainWindow::nativeEvent(eventType, message, result);
 }
 
 // Hide from the Taskbar when minimized
