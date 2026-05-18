@@ -1,8 +1,16 @@
+/*
+ * Original Copyright (c) 2026 PolybiusExtreme
+ *
+ * Licensed under the GNU GPLv3.
+ */
+
 #ifndef LEDWIZMODULE_H
 #define LEDWIZMODULE_H
 
 #include <QObject>
 #include <QLibrary>
+#include <QList>
+#include <QTimer>
 
 //LedWiz SDK
 #include "LEDWiz.h"
@@ -12,7 +20,9 @@
 // Definition of function pointers for the DLL functions
 typedef void (LWZCALL *Ptr_LWZ_SBA)(LWZHANDLE, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int);
 typedef void (LWZCALL *Ptr_LWZ_PBA)(LWZHANDLE, uint8_t const *);
-typedef void (LWZCALL *Ptr_LWZ_SET_NOTIFY)(LWZNOTIFYPROC, LWZDEVICELIST *);
+typedef void (LWZCALL *Ptr_LWZ_REGISTER)(LWZHANDLE, HWND);
+typedef void (LWZCALL *Ptr_LWZ_SET_NOTIFY_EX)(LWZNOTIFYPROC_EX, void *, LWZDEVICELIST *);
+typedef BOOL (LWZCALL *Ptr_LWZ_GET_DEVICE_INFO)(LWZHANDLE, LWZDEVICEINFO *);
 
 class LedWizModule : public QObject
 {
@@ -22,7 +32,13 @@ public:
     explicit LedWizModule(QObject *parent = nullptr);
     ~LedWizModule();
 
+    // Set the HWND of the LEDWiz DLL receiver
+    void setWinID(HWND handle);
+
 public slots:
+    // Collect LEDWiz data
+    void collectLedWizData();
+
     // Set pin state
     void setPinState(quint8 id, quint8 pin, bool state);
 
@@ -38,7 +54,13 @@ public slots:
     // Turn all lights on one board off
     void turnAllLightsOff(quint8 id);
 
+    // Refresh devices
+    void refreshDevices();
+
 signals:
+    // Send LEDWiz device list to DeviceWindow
+    void ledWizDeviceList(const QList<LedWizData> &devices);
+
     // Show error message in main thread
     void showErrorMessage(const QString &title, const QString &message);
 
@@ -55,9 +77,21 @@ private:
     // Number of LedWiz devices
     int numberLedWizDevices = 0;
 
+    // HWND
+    HWND m_attachedHwnd = nullptr;
+
     // Function pointer instances
     Ptr_LWZ_SBA f_LWZ_SBA = nullptr;
     Ptr_LWZ_PBA f_LWZ_PBA = nullptr;
+    Ptr_LWZ_REGISTER f_LWZ_REGISTER = nullptr;
+    Ptr_LWZ_SET_NOTIFY_EX f_LWZ_SET_NOTIFY_EX = nullptr;
+    Ptr_LWZ_GET_DEVICE_INFO f_LWZ_GET_DEVICE_INFO = nullptr;
+
+    // Device notification callback
+    static void LWZCALLBACK deviceNotificationCallback(void *puser, int32_t reason, LWZHANDLE hlwz);
+
+    // Handle device change
+    void handleDeviceChange(int32_t reason, LWZHANDLE hlwz);
 
     // Validate power value
     BYTE validatePowerValue(quint8 value);
