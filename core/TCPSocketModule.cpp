@@ -1,3 +1,10 @@
+/*
+ * Original Copyright (c) 2026 PolybiusExtreme
+ * Portions Copyright (c) 2026 6Bolt
+ *
+ * Licensed under the GNU GPLv3.
+ */
+
 #include "TCPSocketModule.h"
 
 #include "../Global.h"
@@ -39,7 +46,7 @@ TCPSocketModule::~TCPSocketModule()
 void TCPSocketModule::connectTCP()
 {
     stopConnecting = false;
-    if(!isConnected && !isConnecting)
+    if (!isConnected && !isConnecting)
     {
         // Set the address for the TCP Socket
         p_outputTCPSocket->connectToHost(QHostAddress("127.0.0.1"), TCPHOSTPORT);
@@ -74,67 +81,79 @@ void TCPSocketModule::disconnectTCP()
 // Read the TCP Socket and forward it to OutputHookerCore
 void TCPSocketModule::tcpReadData()
 {
-    quint8 i;
-
     // Read the TCP Socket data
-    readData = p_outputTCPSocket->readAll();
+    QByteArray rawData = p_outputTCPSocket->readAll();
 
-    // Convert to Byte Array
-    QString message = QString::fromStdString(readData.toStdString());
-
-    // Remove the \r at the end
-    message.chop(1);
+    QString message = QString::fromUtf8(rawData);
 
     // If there are multiple data lines, they will be separated into lines, using \r or \n
     // If it had 2 data lines together, then \r would be at end, which is chopped off
     // and middle QRegularExpression endLines("[\r\n]");
-    QStringList tcpSocketReadData = message.split(QRegularExpression("[\r\n]"), Qt::SkipEmptyParts);
+    QStringList tcpSocketReadData = message.split(QRegularExpression("[\r\n]+"), Qt::SkipEmptyParts);
 
-    for(i = 0; i < tcpSocketReadData.count(); i++)
+    for (int i = 0; i < tcpSocketReadData.count(); i++)
     {
-        // Get the Output signal name
-        QStringList splitData = tcpSocketReadData[i].split(" = ", Qt::SkipEmptyParts);
+        QString line = tcpSocketReadData[i].trimmed();
+        if (line.isEmpty())
+            continue;
+
+        QStringList splitData = line.split("=");
+        if (splitData.count() < 2)
+            continue;
+
+        QString signal = splitData[0].trimmed();
+        QString value = splitData[1].trimmed();
 
         // Check if game has stopped
-        if(splitData[0].size() == 9 && inGame)
+        if (signal.size() == 9 && inGame)
         {
-            if(splitData[0][5] == 's' && splitData[0][6] == 't' && splitData[0][8] == 'p')
+            if (signal[5] == 's' && signal[6] == 't' && signal[8] == 'p')
             {
                 emit gameHasStopped();
-                inGame = false;
 
-                if(splitData.count() == 1)
-                    splitData.append("0");
+                inGame = false;
             }
+
+            emit dataRead(signal, value);
         }
         else
         {
             // Check for game starting
-            if(splitData[0] == MAMESTART)
+            if (signal == MAMESTART)
             {
                 inGame = true;
 
-                if(splitData[1] == MAMEEMPTY)
+                if (value == MAMEEMPTY)
+                {
                     emit emptyGameHasStarted();
+                }
                 else
-                    emit gameHasStarted(splitData[1]);
+                {
+                    emit gameHasStarted(value);
+                }
             }
-            else if(splitData[0] == GAMESTART)
+            else if (signal == GAMESTART)
             {
                 inGame = true;
 
-                emit gameHasStarted(splitData[1]);
+                emit gameHasStarted(value);
             }
             else
             {
-                if(splitData[0][0] == 'M' && splitData[0][1] == 'a' && splitData[0][2] == 'm')
+                // MAME specific signals (Pause/Orientation)
+                if (signal.startsWith("mame", Qt::CaseInsensitive))
                 {
-                    if(splitData[0][4] == 'P' && splitData[0].size() == 9)
-                        splitData[0] = PAUSE;
-                    else if(splitData[0][4] == 'O' && splitData[0].size() == 15)
-                        splitData[0].replace(MAMEORIENTATION, ORIENTATION);
+                    if (signal.contains("pause", Qt::CaseInsensitive))
+                    {
+                        signal = PAUSE;
+                    }
+                    else if (signal.contains("orientation", Qt::CaseInsensitive))
+                    {
+                        signal.replace(MAMEORIENTATION, ORIENTATION);
+                    }
                 }
-                emit dataRead(splitData[0], splitData[1]);
+
+                emit dataRead(signal, value);
             }
         }
     }
@@ -166,9 +185,9 @@ void TCPSocketModule::tcpSocketDisconnected()
 // Timeout process
 void TCPSocketModule::tcpConnectionTimeOut()
 {
-    if(!isConnected && !stopConnecting && isConnecting)
+    if (!isConnected && !stopConnecting && isConnecting)
     {
-        if(p_outputTCPSocket->state() != QAbstractSocket::ConnectedState)
+        if (p_outputTCPSocket->state() != QAbstractSocket::ConnectedState)
         {
             p_outputTCPSocket->connectToHost(QHostAddress("127.0.0.1"), TCPHOSTPORT);
             p_waitForConnection->start();
