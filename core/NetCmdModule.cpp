@@ -34,13 +34,29 @@ NetCmdModule::NetCmdModule(QObject *parent)
 
 NetCmdModule::~NetCmdModule()
 {
+    // Disconnect TCP Socket 1
     if (p_tcpSocket1->state() == QAbstractSocket::ConnectedState)
     {
         p_tcpSocket1->disconnectFromHost();
     }
+
+    // Disconnect TCP Socket 2
     if (p_tcpSocket2->state() == QAbstractSocket::ConnectedState)
     {
         p_tcpSocket2->disconnectFromHost();
+    }
+
+    // Disconnect network access manager
+    p_networkManager->disconnect();
+
+    QList<QNetworkReply*> activeReplies = p_networkManager->findChildren<QNetworkReply*>();
+
+    for (QNetworkReply* reply : std::as_const(activeReplies))
+    {
+        if (reply->isRunning())
+        {
+            reply->abort();
+        }
     }
 }
 
@@ -176,7 +192,7 @@ void NetCmdModule::sendHttpGetRequest(const QString &urlString)
 
     if (!url.isValid())
     {
-        emit showErrorMessage("Send HTTP GET Request - Error!", "Invalid URL!");
+        emit showErrorMessage("HTTP GET Request - Error!", "Invalid URL!");
         return;
     }
 
@@ -185,13 +201,13 @@ void NetCmdModule::sendHttpGetRequest(const QString &urlString)
 }
 
 // Send HTTP POST request
-void NetCmdModule::sendHttpPostRequest(const QString &urlString, const QByteArray &data, const QString &contentType)
+void NetCmdModule::sendHttpPostRequest(const QString &urlString, const QString &contentType, const QByteArray &data)
 {
     QUrl url(urlString);
 
     if (!url.isValid())
     {
-        emit showErrorMessage("Send HTTP POST Request - Error!", "Invalid URL!");
+        emit showErrorMessage("HTTP POST Request - Error!", "Invalid URL!");
         return;
     }
 
