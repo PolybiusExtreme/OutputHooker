@@ -159,7 +159,7 @@ private:
 
     // Bool settings
     bool useNewOutputsNotification;
-    bool saveNewOutputsToDefaultINI;
+    bool addNewOutputsToDefaultINI;
 
     // If a child window is open, stop the core
     // If a child window is closed, restart the core
