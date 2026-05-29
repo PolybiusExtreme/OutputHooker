@@ -19,7 +19,7 @@ This tool acts as the essential bridge between emulators and your arcade hardwar
   - Positional Guns with USB HID support (Alien,...)
   - LEDWiz boards (Original, Clone, Pinscape)
   - Ultimarc LED boards
-  - WLED boards (UDP Realtime)
+  - WLED boards (JSON API, UDP Realtime)
   - Gamecontrollers with SDL3 support (Force Feedback)
   - Any hardware that receives TCP/UDP or USB HID commands
 
