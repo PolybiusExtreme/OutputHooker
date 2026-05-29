@@ -37,7 +37,7 @@ EditorAddCmdWindow::EditorAddCmdWindow(QWidget *parent)
     ui->cbCategory->addItem("Ultimarc Controller",                 CatUltimarc);
     ui->cbCategory->addItem("Gamecontroller",                      CatSDL3FFB);
     ui->cbCategory->addItem("Generic HID",                         CatUsbHid);
-    ui->cbCategory->addItem("Network (TCP/UDP)",                   CatNetwork);
+    ui->cbCategory->addItem("Network (TCP/UDP/HTTP)",              CatNetwork);
     ui->cbCategory->addItem("External Application",                CatApplication);
     ui->cbCategory->addItem("Audio",                               CatAudio);
     ui->cbCategory->addItem("Miscellaneous",                       CatMisc);
@@ -467,6 +467,13 @@ FunctionCommand EditorAddCmdWindow::getCommand() const
         cmd.param4 = ui->lineEditParameter4->text();
         break;
 
+    case CmdHprSend:
+        cmd.commandCode = HTTPPOSTREQUEST;
+        cmd.param1 = ui->lineEditParameter1->text();
+        cmd.param2 = ui->lineEditParameter2->text();
+        cmd.param3 = ui->lineEditParameter3->text();
+        break;
+
     case CmdAppLaunch:
         cmd.commandCode = APPLAUNCH;
         cmd.param1 = ui->lineEditParameter1->text();
@@ -802,6 +809,7 @@ void EditorAddCmdWindow::handleCategoryChanged(int index)
         addCmd("TCP - Disconnect",               CmdTcpDisconnect);
         addCmd("TCP - Send Command",             CmdTcpSend);
         addCmd("UDP - Send Command",             CmdUdpSend);
+        addCmd("HTTP POST - Send Request",       CmdHprSend);
     }
 
     if (categoryData == CatAll || categoryData == CatApplication)
@@ -984,6 +992,10 @@ void EditorAddCmdWindow::handleFunctionChanged(int index)
 
     case CmdUdpSend:
         setupUdpUI(cmd);
+        break;
+
+    case CmdHprSend:
+        setupHttpUI(cmd);
         break;
 
     case CmdAppLaunch:
@@ -2235,6 +2247,26 @@ void EditorAddCmdWindow::setupUdpUI(CommandType cmd)
     });
 
     ui->cbParameter1->currentIndexChanged(ui->cbParameter1->currentIndex());
+}
+
+// Setup UI - HTTP POST Request function
+void EditorAddCmdWindow::setupHttpUI(CommandType cmd)
+{
+    setParamLabelVisibility(true, true, true, false, false);
+    setParamComboBoxVisibility(false, false, false, false, false);
+    setParamLineEditVisibility(true, true, true, false, false);
+    ui->labelParameter1->setFixedWidth(150);
+    ui->labelParameter1->setText("URL:");
+    ui->lineEditParameter1->setFixedWidth(150);
+    ui->lineEditParameter1->setText("http://192.168.0.150/json");
+    ui->labelParameter2->setFixedWidth(100);
+    ui->labelParameter2->setText("Content-Type:");
+    ui->lineEditParameter2->setFixedWidth(100);
+    ui->lineEditParameter2->setText("application/json");
+    ui->labelParameter3->setFixedWidth(120);
+    ui->labelParameter3->setText("Request:");
+    ui->lineEditParameter3->setFixedWidth(120);
+    ui->lineEditParameter3->setText(R"({"on":true,"bri":255})");
 }
 
 // Setup UI - External Application functions
