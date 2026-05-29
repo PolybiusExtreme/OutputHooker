@@ -291,6 +291,7 @@ void EditorWindow::on_actionCommand_triggered()
         case CmdUltimarcIntensity:
         case CmdUltimarcState:
         case CmdTcpConnect:
+        case CmdHprSend:
             // [Command] [Parameter1] [Parameter2] [Parameter3]
             finalString = QString("%1 %2 %3 %4").arg(res.commandCode, res.param1, res.param2, res.param3);
             break;
