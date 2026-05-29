@@ -15,13 +15,13 @@ TCPSocketModule::TCPSocketModule(QObject *parent)
     // Game is not running
     inGame = false;
 
-    // Is the TCP Socket connected
+    // TCP Socket is not connected
     isConnected = false;
 
-    // Is TCP Socket trying to connect
+    // TCP Socket is not trying to connect
     isConnecting = false;
 
-    // Stop connecting to TCP Server
+    // TCP socket is set to keep connecting
     stopConnecting = false;
 
     p_outputTCPSocket = new QTcpSocket(this);
@@ -29,49 +29,48 @@ TCPSocketModule::TCPSocketModule(QObject *parent)
     connect(p_outputTCPSocket, &QTcpSocket::readyRead, this, &TCPSocketModule::tcpReadData);
     connect(p_outputTCPSocket, &QTcpSocket::connected, this, &TCPSocketModule::tcpSocketConnected);
     connect(p_outputTCPSocket, &QTcpSocket::disconnected, this, &TCPSocketModule::tcpSocketDisconnected);
+    connect(p_outputTCPSocket, &QTcpSocket::errorOccurred, this, &TCPSocketModule::tcpSocketError);
 
     p_waitForConnection = new QTimer(this);
     p_waitForConnection->setInterval(TCPTIMERTIME);
     p_waitForConnection->setSingleShot(true);
-    connect(p_waitForConnection, &QTimer::timeout, this, &TCPSocketModule::tcpConnectionTimeOut);
+    connect(p_waitForConnection, &QTimer::timeout, this, &TCPSocketModule::tcpConnect);
 }
 
 TCPSocketModule::~TCPSocketModule()
 {
-    p_waitForConnection->stop();
-    delete p_waitForConnection;
+    if (p_outputTCPSocket)
+    {
+        p_outputTCPSocket->abort();
+    }
 }
 
-// Connect the TCP Socket and wait for connection
-void TCPSocketModule::connectTCP()
+// Connect the TCP Socket
+void TCPSocketModule::tcpConnect()
 {
-    stopConnecting = false;
+    if (stopConnecting)
+    {
+        return;
+    }
+
     if (!isConnected && !isConnecting)
     {
-        // Set the address for the TCP Socket
-        p_outputTCPSocket->connectToHost(QHostAddress("127.0.0.1"), TCPHOSTPORT);
-
-        // Start timer for connection
-        p_waitForConnection->start();
-
-        // Set the isConnecting bool
         isConnecting = true;
-
-        // Wait for connection
-        p_outputTCPSocket->waitForConnected(TIMETOWAIT);
+        p_outputTCPSocket->connectToHost(QHostAddress::LocalHost, TCPHOSTPORT);
     }
 }
 
 // Disconnect the TCP Socket
-void TCPSocketModule::disconnectTCP()
+void TCPSocketModule::tcpDisconnect()
 {
-    // Set to stop TCP Socket from trying to connect again
+    // TCP socket stops connecting
     stopConnecting = true;
 
+    // Stop reconnect timer
     p_waitForConnection->stop();
 
     // Close TCP Socket
-    p_outputTCPSocket->close();
+    p_outputTCPSocket->abort();
 
     isConnected = false;
     isConnecting = false;
@@ -105,61 +104,48 @@ void TCPSocketModule::tcpReadData()
         QString value = splitData[1].trimmed();
 
         // Check if game has stopped
-        if (signal.size() == 9 && inGame)
+        if (signal == MAMESTOP || signal == GAMESTOP)
         {
-            if (signal[5] == 's' && signal[6] == 't' && signal[8] == 'p')
-            {
-                emit gameHasStopped();
+            emit gameHasStopped();
 
-                inGame = false;
-            }
+            inGame = false;
 
             emit dataRead(signal, value);
         }
-        else
+        // Check for game starting
+        else if (signal == MAMESTART || signal == GAMESTART)
         {
-            // Check for game starting
-            if (signal == MAMESTART)
-            {
-                inGame = true;
+            inGame = true;
 
-                if (value == MAMEEMPTY)
-                {
-                    emit emptyGameHasStarted();
-                }
-                else
-                {
-                    emit gameHasStarted(value);
-                }
-            }
-            else if (signal == GAMESTART)
+            if (value == MAMEEMPTY)
             {
-                inGame = true;
-
-                emit gameHasStarted(value);
+                emit emptyGameHasStarted();
             }
             else
             {
-                // MAME specific signals (Pause/Orientation)
-                if (signal.startsWith("mame", Qt::CaseInsensitive))
-                {
-                    if (signal.contains("pause", Qt::CaseInsensitive))
-                    {
-                        signal = PAUSE;
-                    }
-                    else if (signal.contains("orientation", Qt::CaseInsensitive))
-                    {
-                        signal.replace(MAMEORIENTATION, ORIENTATION);
-                    }
-                }
-
-                emit dataRead(signal, value);
+                emit gameHasStarted(value);
             }
+        }
+        else if (inGame)
+        {
+            // MAME specific signals (Pause/Orientation)
+            if (signal.startsWith("mame", Qt::CaseInsensitive))
+            {
+                if (signal.contains("pause", Qt::CaseInsensitive))
+                {
+                    signal = PAUSE;
+                }
+                else if (signal.contains("orientation", Qt::CaseInsensitive))
+                {
+                    signal.replace(MAMEORIENTATION, ORIENTATION);
+                }
+            }
+            emit dataRead(signal, value);
         }
     }
 }
 
-// When the TCP Socket connects, it calls this slot, which emit another signal to
+// When the TCP Socket connects, it calls this slot, which emit a signal to
 // OutputHookerCore to let it know that it is connected
 void TCPSocketModule::tcpSocketConnected()
 {
@@ -171,7 +157,7 @@ void TCPSocketModule::tcpSocketConnected()
     emit tcpConnectedSignal();
 }
 
-// When the TCP Socket disconnects, it calls this slot, which emit another signal to
+// When the TCP Socket disconnects, it calls this slot, which emit a signal to
 // OutputHookerCore to let it know that it is disconnected
 void TCPSocketModule::tcpSocketDisconnected()
 {
@@ -180,18 +166,21 @@ void TCPSocketModule::tcpSocketDisconnected()
     inGame = false;
 
     emit tcpDisconnectedSignal();
+
+    if (!stopConnecting)
+    {
+        p_waitForConnection->start();
+    }
 }
 
-// Timeout process
-void TCPSocketModule::tcpConnectionTimeOut()
+// TCP Socket error process
+void TCPSocketModule::tcpSocketError(QAbstractSocket::SocketError socketError)
 {
-    if (!isConnected && !stopConnecting && isConnecting)
+    isConnecting = false;
+    isConnected = false;
+
+    if (!stopConnecting)
     {
-        if (p_outputTCPSocket->state() != QAbstractSocket::ConnectedState)
-        {
-            p_outputTCPSocket->connectToHost(QHostAddress("127.0.0.1"), TCPHOSTPORT);
-            p_waitForConnection->start();
-            p_outputTCPSocket->waitForConnected(TIMETOWAIT);
-        }
+        p_waitForConnection->start();
     }
 }
