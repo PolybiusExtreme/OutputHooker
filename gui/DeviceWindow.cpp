@@ -134,9 +134,11 @@ void DeviceWindow::updateDeviceList()
     }
     else
     {
+        int index = 1;
         for (const auto &device : std::as_const(m_ultimarcDevices))
         {
-            ui->listWidgetDevices->addItem(QString("ID%1: %2").arg(QString::number(device.deviceID), device.typeName));
+            ui->listWidgetDevices->addItem(QString("ID%1: %2").arg(QString::number(index), device.typeName));
+            index++;
         }
     }
 
