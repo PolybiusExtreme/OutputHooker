@@ -43,7 +43,7 @@ public:
     void sendHttpGetRequest(const QString &urlString);
 
     // Send HTTP POST request
-    void sendHttpPostRequest(const QString &urlString, const QByteArray &data, const QString &contentType = "application/json");
+    void sendHttpPostRequest(const QString &urlString, const QString &contentType, const QByteArray &data);
 
 public slots:
     // TCP socket slots
