@@ -28,24 +28,24 @@ public:
 
 public slots:
     // Connect the TCP Socket and wait for connection
-    void connectTCP();
+    void tcpConnect();
 
     // Disconnect the TCP Socket
-    void disconnectTCP();
+    void tcpDisconnect();
 
     // Read the TCP Socket and forward it to OutputHookerCore
     void tcpReadData();
 
-    // When the TCP Socket connects, it calls this slot, which emit another signal to
+    // When the TCP Socket connects, it calls this slot, which emit a signal to
     // OutputHookerCore to let it know that it is connected
     void tcpSocketConnected();
 
-    // When the TCP Socket disconnects, it calls this slot, which emit another signal to
+    // When the TCP Socket disconnects, it calls this slot, which emit a signal to
     // OutputHookerCore to let it know that it is disconnected
     void tcpSocketDisconnected();
 
-    // Timeout process
-    void tcpConnectionTimeOut();
+    // TCP Socket error process
+    void tcpSocketError(QAbstractSocket::SocketError socketError);
 
 signals:
     // Signal sent to OutputHookerCore with read data
