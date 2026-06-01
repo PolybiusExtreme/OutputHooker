@@ -19,7 +19,7 @@ This tool acts as the essential bridge between emulators and your arcade hardwar
   - Positional Guns with USB HID support (Alien,...)
   - LEDWiz boards (Original, Clone, Pinscape)
   - Ultimarc LED boards
-  - WLED boards (JSON API, UDP Realtime)
+  - WLED boards (JSON API)
   - Gamecontrollers with SDL3 support (Force Feedback)
   - Any hardware that receives TCP/UDP or USB HID commands
 
@@ -28,8 +28,8 @@ This tool acts as the essential bridge between emulators and your arcade hardwar
   - **OutputHooker** features a built-in editor inspired by the original MAMEHooker workflow,  
      allowing you to configure hardware triggers without leaving the app
 
-- **MAME Universal State Outputs (LUA) Support**
-  - [MAME LUA outputs](https://github.com/djGLiTCH/MAME-LUA-SCRIPT-STATE-OUTPUTS) by djGliTCH are supported
+- **MAME State Output Project Support**
+  - [MAME State Output Plugin](https://github.com/djGLiTCH/MAME-LUA-SCRIPT-STATE-OUTPUTS) by djGliTCH is supported
 
 ## Getting Started
 1. Download the latest build from the [Releases](https://github.com/PolybiusExtreme/OutputHooker/releases) page
