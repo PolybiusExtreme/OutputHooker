@@ -26,7 +26,6 @@ EditorWindow::EditorWindow(QWidget *parent)
 
     move(pos()+(QGuiApplication::primaryScreen()->geometry().center()-geometry().center()));
     setWindowTitle(QCoreApplication::applicationName()+"-Editor");
-    setWindowModality(Qt::ApplicationModal);
 
     new SyntaxHighlighter(ui->textEdit->document());
 
