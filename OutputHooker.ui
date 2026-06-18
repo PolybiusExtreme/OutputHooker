@@ -17,7 +17,7 @@
    <string>OutputHooker</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QTextBrowser" name="textBrowser">
+   <widget class="QListWidget" name="listWidget">
     <property name="geometry">
      <rect>
       <x>0</x>
@@ -30,6 +30,9 @@
      <font>
       <pointsize>10</pointsize>
      </font>
+    </property>
+    <property name="selectionMode">
+     <enum>QAbstractItemView::SelectionMode::NoSelection</enum>
     </property>
    </widget>
   </widget>
@@ -46,7 +49,7 @@
     <property name="title">
      <string>Options</string>
     </property>
-    <addaction name="actionConnected_Devices"/>
+    <addaction name="actionConnectedDevices"/>
     <addaction name="actionTestOutputs"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -144,7 +147,7 @@
     <string>Add new Output(s) to default.ini</string>
    </property>
   </action>
-  <action name="actionConnected_Devices">
+  <action name="actionConnectedDevices">
    <property name="text">
     <string>Connected Device(s)</string>
    </property>
