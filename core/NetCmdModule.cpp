@@ -196,8 +196,11 @@ void NetCmdModule::sendHttpGetRequest(const QString &urlString)
         return;
     }
 
-    QNetworkRequest request(url);
-    p_networkManager->get(request);
+    // Extract the IP address or hostname
+    QString hostIp = url.host();
+
+    // Start the ping test in the background
+    pingBeforeGet(hostIp, urlString);
 }
 
 // Send HTTP POST request
@@ -211,10 +214,11 @@ void NetCmdModule::sendHttpPostRequest(const QString &urlString, const QString &
         return;
     }
 
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, contentType);
+    // Extract the IP address or hostname
+    QString hostIp = url.host();
 
-    p_networkManager->post(request, data);
+    // Start the ping test in the background
+    pingBeforePost(hostIp, urlString, contentType, data);
 }
 
 // TCP socket 1 slots
@@ -235,6 +239,7 @@ void NetCmdModule::tcpSocketReadData()
     }
 }
 
+// TCP socket connected
 void NetCmdModule::tcpSocketConnected()
 {
     QTcpSocket* senderSocket = qobject_cast<QTcpSocket*>(sender());
@@ -264,6 +269,7 @@ void NetCmdModule::tcpSocketConnected()
     }
 }
 
+// TCP socket disconnected
 void NetCmdModule::tcpSocketDisconnected()
 {
     QTcpSocket* senderSocket = qobject_cast<QTcpSocket*>(sender());
@@ -283,6 +289,7 @@ void NetCmdModule::tcpSocketDisconnected()
     }
 }
 
+// Process the HTTP response
 void NetCmdModule::onHttpFinished(QNetworkReply *reply)
 {
     if (reply->error() == QNetworkReply::NoError)
@@ -293,6 +300,65 @@ void NetCmdModule::onHttpFinished(QNetworkReply *reply)
     {
         emit showErrorMessage("HTTP Request Failed!", reply->errorString());
     }
-
     reply->deleteLater();
+}
+
+
+// Ping before HTTP GET request
+void NetCmdModule::pingBeforeGet(const QString &hostIp, const QString &urlString)
+{
+    QProcess *pingProcess = new QProcess(this);
+    QStringList arguments;
+
+
+    // -n 1 (1 packet), -w 1000 (1 second timeout)
+    arguments << "-n" << "1" << "-w" << "1000" << hostIp;
+    pingProcess->start("ping", arguments);
+
+    connect(pingProcess, &QProcess::finished, this, [this, urlString, pingProcess](int exitCode)
+    {
+        // exitCode 0 = Ping was successful, host is here!
+        if (exitCode == 0)
+        {
+            QUrl url(urlString);
+            QNetworkRequest request(url);
+            p_networkManager->get(request);
+        }
+        else
+        {
+            QString errorMsg = "The target IP address " + QUrl(urlString).host() + " is not reachable on the network or is not responding!";
+            emit showErrorMessage("HTTP GET Request - Error!", errorMsg);
+
+        }
+        pingProcess->deleteLater();
+    });
+}
+
+// Ping before HTTP POST request
+void NetCmdModule::pingBeforePost(const QString &hostIp, const QString &urlString, const QString &contentType, const QByteArray &data)
+{
+    QProcess *pingProcess = new QProcess(this);
+    QStringList arguments;
+
+    // -n 1 (1 packet), -w 1000 (1 second timeout)
+    arguments << "-n" << "1" << "-w" << "1000" << hostIp;
+    pingProcess->start("ping", arguments);
+
+    connect(pingProcess, &QProcess::finished, this, [this, urlString, contentType, data, pingProcess](int exitCode)
+    {
+        // exitCode 0 = Ping was successful, host is here!
+        if (exitCode == 0)
+        {
+            QUrl url(urlString);
+            QNetworkRequest request(url);
+            request.setHeader(QNetworkRequest::ContentTypeHeader, contentType);
+            p_networkManager->post(request, data);
+        }
+        else
+        {
+            QString errorMsg = "The target IP address " + QUrl(urlString).host() + " is not reachable on the network or is not responding!";
+            emit showErrorMessage("HTTP POST Request - Error!", errorMsg);
+        }
+        pingProcess->deleteLater();
+    });
 }
