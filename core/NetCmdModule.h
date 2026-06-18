@@ -17,6 +17,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QProcess>
 #include <QUrl>
 
 class NetCmdModule : public QObject
@@ -73,6 +74,10 @@ private:
 
     // Pointer - HTTP network access manager
     QNetworkAccessManager *p_networkManager;
+
+    // Ping before HTTP GET/POST request
+    void pingBeforeGet(const QString &hostIp, const QString &urlString);
+    void pingBeforePost(const QString &hostIp, const QString &urlString, const QString &contentType, const QByteArray &data);
 
     bool tcp1IsConnected;
     bool tcp2IsConnected;
