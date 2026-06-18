@@ -90,6 +90,7 @@ void DeviceWindow::updateDeviceList()
         QListWidgetItem *headerItem = new QListWidgetItem(text, ui->listWidgetDevices);
         QFont font = headerItem->font();
         font.setPointSize(11);
+        font.setUnderline(true);
         headerItem->setFont(font);
         ui->listWidgetDevices->addItem(headerItem);
     };
