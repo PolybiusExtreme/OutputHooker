@@ -23,7 +23,7 @@ OutputHooker::OutputHooker(QWidget *parent)
     QVBoxLayout *mainLayout = new QVBoxLayout(ui->centralwidget);
     mainLayout->setContentsMargins(5, 5, 5, 5);
     mainLayout->setSpacing(0);
-    mainLayout->addWidget(ui->textBrowser);
+    mainLayout->addWidget(ui->listWidget);
     setCentralWidget(ui->centralwidget);
 
     QRect screenrect = QApplication::primaryScreen()->geometry();
@@ -65,7 +65,7 @@ OutputHooker::OutputHooker(QWidget *parent)
     trayIconMenu->addAction(restoreAction);
     trayIconMenu->addSeparator();
     connectedDevicesAction = new QAction("Connected Device(s)", this);
-    connect(connectedDevicesAction, &QAction::triggered, this, &OutputHooker::on_actionConnected_Devices_triggered);
+    connect(connectedDevicesAction, &QAction::triggered, this, &OutputHooker::on_actionConnectedDevices_triggered);
     trayIconMenu->addAction(connectedDevicesAction);
     testOutputAction = new QAction("Test Output(s)", this);
     connect(testOutputAction, &QAction::triggered, this, &OutputHooker::on_actionTestOutputs_triggered);
@@ -165,10 +165,16 @@ void OutputHooker::setVisible(bool visible)
 void OutputHooker::displayNoGame()
 {
     // Display text QMap needs to be cleared
-    signalNumberMap.clear();
+    signalItemMap.clear();
 
-    // textBrowser needs to be cleared
-    ui->textBrowser->clear();
+    // listWidget needs to be cleared
+    ui->listWidget->clear();
+
+    // Reset pointers
+    romItem = nullptr;
+    fileItem = nullptr;
+    orientationItem = nullptr;
+    pauseItem = nullptr;
 
     // Disable menu entry "Edit ini file for current game"
     ui->actionEditCurrentGameINI->setEnabled(false);
@@ -177,30 +183,38 @@ void OutputHooker::displayNoGame()
 // Displays top of game data on MainWindow
 void OutputHooker::displayGame(QString gName, QString iName, bool iniGame, bool noGameFound)
 {
-    // Display text QMap needs to be cleared
-    signalNumberMap.clear();
+    // Display text QMap and listWidget needs to be cleared
+    signalItemMap.clear();
+    ui->listWidget->clear();
+
     isGameINI = iniGame;
     noGameFileFound = noGameFound;
     gameName = gName;
     iniName = iName;
-    makeTopDisplayText();
-    displayTextList << " " << OUTPUTSIGNALS << OUTPUTSIGNALSDASHES;
-    displayText();
 
-    // Enable menu entry "Edit ini file for current game",
-    // if "Add new output(s) to default.ini" is not set
-    if (!addNewOutputsToDefaultINI)
-        ui->actionEditCurrentGameINI->setEnabled(true);
+    makeTopDisplayText();
+
+    ui->listWidget->addItem(" ");
+    QListWidgetItem *signalsItem = new QListWidgetItem(OUTPUTSIGNALS, ui->listWidget);
+    QFont font = signalsItem->font();
+    font.setPointSize(11);
+    font.setUnderline(true);
+    signalsItem->setFont(font);
+
+    // Enable menu entry "Edit ini file for current game"
+    ui->actionEditCurrentGameINI->setEnabled(true);
 }
 
 // Displays empty game data on MainWindow
 void OutputHooker::displayEmptyGame()
 {
-    // Display text QMap needs to be cleared
-    signalNumberMap.clear();
+    // Display text QMap and listWidget needs to be cleared
+    signalItemMap.clear();
+    ui->listWidget->clear();
+
     gameName = MAMENOGAMEEMPTY;
+
     makeTopDisplayText();
-    displayText();
 
     // Disable menu entry "Edit ini file for current game"
     ui->actionEditCurrentGameINI->setEnabled(false);
@@ -210,35 +224,40 @@ void OutputHooker::displayEmptyGame()
 void OutputHooker::addSignalDisplay(const QString &sig, const QString &dat)
 {
     QString temp = sig + " = " + dat;
-    quint16 signalCount = displayTextList.count();
-    displayTextList << temp;
-    signalNumberMap.insert(sig, signalCount);
-    displayText();
+    QListWidgetItem *item = new QListWidgetItem(temp, ui->listWidget);
+    signalItemMap.insert(sig, item);
 }
 
 // Update output signals data on the MainWindow
 void OutputHooker::updateSignalDisplay(const QString &sig, const QString &dat)
 {
-    QString temp = sig + " = " + dat;
-    quint16 displayIndex = signalNumberMap[sig];
-    displayTextList[displayIndex] = temp;
-    displayText();
+    if (signalItemMap.contains(sig))
+    {
+        QString temp = sig + " = " + dat;
+        signalItemMap[sig]->setText(temp);
+    }
+    else
+    {
+        addSignalDisplay(sig, dat);
+    }
 }
 
 // Update the pause data on the MainWindow
 void OutputHooker::updatePauseDisplay(QString dat)
 {
-    QString pTemp = PAUSEEQUALS + dat;
-    displayTextList[PAUSEINDEX] = pTemp;
-    displayText();
+    if (pauseItem)
+    {
+        pauseItem->setText(PAUSEEQUALS + dat);
+    }
 }
 
 // Update the orientation data on the MainWindow
 void OutputHooker::updateOrientationDisplay(QString sig, QString dat)
 {
-    QString oTemp = sig + "=" + dat;
-    displayTextList[ORIENTATIONINDEX] = oTemp;
-    displayText();
+    if (orientationItem)
+    {
+        orientationItem->setText(sig + "=" + dat);
+    }
 }
 
 // Update the connection status
@@ -251,6 +270,11 @@ void OutputHooker::updateConnectionStatus(OutputHookerCore::ConnectionType type,
     else if (type == OutputHookerCore::TCP)
     {
         isTCPConnected = status;
+    }
+
+    if (!isWinMsgConnected && !isTCPConnected)
+    {
+        ui->actionEditCurrentGameINI->setEnabled(false);
     }
 }
 
@@ -287,7 +311,7 @@ void OutputHooker::readSocket()
 }
 
 // Open DeviceWindow
-void OutputHooker::on_actionConnected_Devices_triggered()
+void OutputHooker::on_actionConnectedDevices_triggered()
 {
     if (isTCPConnected || isWinMsgConnected)
     {
@@ -296,7 +320,10 @@ void OutputHooker::on_actionConnected_Devices_triggered()
     }
     else if (!p_deviceWindow)
     {
+        connectedDevicesAction->setEnabled(false);
+        ui->actionConnectedDevices->setEnabled(false);
         p_deviceWindow = new DeviceWindow(this);
+        connect(p_deviceWindow, &DeviceWindow::rejected, this, &OutputHooker::DeviceWindow_closed);
         connect(p_core, &OutputHookerCore::ledWizDeviceList, p_deviceWindow, &DeviceWindow::updateLedWizList);
         connect(p_core, &OutputHookerCore::ultimarcDeviceList, p_deviceWindow, &DeviceWindow::updateUltimarcList);
         connect(p_core, &OutputHookerCore::sdlDeviceList, p_deviceWindow, &DeviceWindow::updateSdlList);
@@ -304,7 +331,14 @@ void OutputHooker::on_actionConnected_Devices_triggered()
         QMetaObject::invokeMethod(p_core->getPacDriveModule(), "collectUltimarcData", Qt::QueuedConnection);
         QMetaObject::invokeMethod(p_core->getSdlCtrlModule(), "collectSdlData", Qt::QueuedConnection);
     }
-    p_deviceWindow->exec();
+    p_deviceWindow->show();
+}
+
+// On close of DeviceWindow
+void OutputHooker::DeviceWindow_closed()
+{
+    connectedDevicesAction->setEnabled(true);
+    ui->actionConnectedDevices->setEnabled(true);
 }
 
 // Open TestOutputWindow
@@ -318,17 +352,19 @@ void OutputHooker::on_actionTestOutputs_triggered()
     else if (!p_testOutputWindow)
     {
         testOutputAction->setEnabled(false);
+        ui->actionTestOutputs->setEnabled(false);
         p_testOutputWindow = new TestOutputWindow(this);
         connect(p_testOutputWindow, &TestOutputWindow::sendTestCommand, p_core, &OutputHookerCore::executeTestCommand);
         connect(p_testOutputWindow, &TestOutputWindow::rejected, this, &OutputHooker::TestOutputWindow_closed);
     }
-    p_testOutputWindow->exec();
+    p_testOutputWindow->show();
 }
 
 // On close of TestOutputWindow
 void OutputHooker::TestOutputWindow_closed()
 {
     testOutputAction->setEnabled(true);
+    ui->actionTestOutputs->setEnabled(true);
 }
 
 // Close OutputHooker
@@ -388,6 +424,9 @@ void OutputHooker::on_actionEditDefaultINI_triggered()
         }
 
         scriptEditorAction->setEnabled(false);
+        ui->actionEditDefaultINI->setEnabled(false);
+        ui->actionEditSpecificGameINI->setEnabled(false);
+        ui->actionEditCurrentGameINI->setEnabled(false);
         QString fileName = QApplication::applicationDirPath() + "/" + INIFILEDIR + "/" + DEFAULTFILE + ENDOFINIFILE;
         p_editorWindow = new EditorWindow(this);
         p_editorWindow->setAttribute(Qt::WA_DeleteOnClose);
@@ -410,6 +449,9 @@ void OutputHooker::on_actionEditSpecificGameINI_triggered()
         }
 
         scriptEditorAction->setEnabled(false);
+        ui->actionEditDefaultINI->setEnabled(false);
+        ui->actionEditSpecificGameINI->setEnabled(false);
+        ui->actionEditCurrentGameINI->setEnabled(false);
 
         QString iniPath = QApplication::applicationDirPath() + "/ini/";
         QFileDialog dialog(this, "Open game ini file", iniPath, "INI File (*.ini)");
@@ -458,6 +500,9 @@ void OutputHooker::on_actionEditSpecificGameINI_triggered()
         else
         {
             scriptEditorAction->setEnabled(true);
+            ui->actionEditDefaultINI->setEnabled(true);
+            ui->actionEditSpecificGameINI->setEnabled(true);
+            ui->actionEditCurrentGameINI->setEnabled(isTCPConnected || isWinMsgConnected);
             p_core->startCore();
             coreRunning = true;
         }
@@ -477,6 +522,9 @@ void OutputHooker::on_actionEditCurrentGameINI_triggered()
         }
 
         scriptEditorAction->setEnabled(false);
+        ui->actionEditDefaultINI->setEnabled(false);
+        ui->actionEditSpecificGameINI->setEnabled(false);
+        ui->actionEditCurrentGameINI->setEnabled(false);
         QString fileName = QApplication::applicationDirPath() + "/" + INIFILEDIR + "/" + gameName + ENDOFINIFILE;
         p_editorWindow = new EditorWindow(this);
         p_editorWindow->setAttribute(Qt::WA_DeleteOnClose);
@@ -500,13 +548,27 @@ void OutputHooker::EditorWindow_closed()
     p_core->startCore();
     coreRunning = true;
     scriptEditorAction->setEnabled(true);
+    ui->actionEditDefaultINI->setEnabled(true);
+    ui->actionEditSpecificGameINI->setEnabled(true);
+    ui->actionEditCurrentGameINI->setEnabled(isTCPConnected || isWinMsgConnected);
 }
 
 // Open AboutWindow
 void OutputHooker::on_actionAboutWindow_triggered()
 {
-    p_aboutWindow = new AboutWindow(this);
-    p_aboutWindow->exec();
+    if (!p_aboutWindow)
+    {
+        ui->actionAboutWindow->setEnabled(false);
+        p_aboutWindow = new AboutWindow(this);
+        connect(p_aboutWindow, &DeviceWindow::rejected, this, &OutputHooker::AboutWindow_closed);
+    }
+    p_aboutWindow->show();
+}
+
+// On close of AboutWindow
+void OutputHooker::AboutWindow_closed()
+{
+    ui->actionAboutWindow->setEnabled(true);
 }
 
 // Device connect or disconnect event
@@ -549,42 +611,30 @@ void OutputHooker::changeEvent(QEvent *event)
     QMainWindow::changeEvent(event);
 }
 
-// Makes the default display data that is shown in the textBrowser
+// Makes the default display data that is shown in the listWidget
 void OutputHooker::makeTopDisplayText()
 {
-    displayTextList.clear();
+    QListWidgetItem *gameInfoItem = new QListWidgetItem(GAMEINFO, ui->listWidget);
+    QFont font = gameInfoItem->font();
+    font.setPointSize(11);
+    font.setUnderline(true);
+    gameInfoItem->setFont(font);
 
-    displayTextList << GAMEINFO << GAMEINFODASHES;
+    // ROM name
+    QString tempRom = ROMEQUALS + gameName;
+    romItem = new QListWidgetItem(tempRom, ui->listWidget);
 
-    QString temp = ROMEQUALS;
-
-    temp.append(gameName);
-
-    displayTextList << temp;
-
+    // Game file
+    QString tempFile = GAMEFILE;
     if (gameName != MAMENOGAMEEMPTY && !gameName.isEmpty())
     {
-        temp = GAMEFILE;
-
-        temp.append(iniName);
-
+        tempFile.append(iniName);
         if (isGameINI)
-            temp.append(ENDOFINIFILE);
+            tempFile.append(ENDOFINIFILE);
     }
-    else
-    {
-        temp = GAMEFILE;
-    }
+    fileItem = new QListWidgetItem(tempFile, ui->listWidget);
 
-    displayTextList << temp << ORIENTATIONEQUAL0 << PAUSEEQUALS0;
-}
-
-// Display the display data in the textBrowser
-void OutputHooker::displayText()
-{
-    quint16 lineCount = displayTextList.count();
-    ui->textBrowser->clear();
-    ui->textBrowser->setPlainText(displayTextList[0]);
-    for (quint8 i = 1; i < lineCount; i++)
-        ui->textBrowser->append(displayTextList[i]);
+    // Orientation & Pause
+    orientationItem = new QListWidgetItem(ORIENTATIONEQUAL0, ui->listWidget);
+    pauseItem = new QListWidgetItem(PAUSEEQUALS0, ui->listWidget);
 }
