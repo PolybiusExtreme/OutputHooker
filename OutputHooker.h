@@ -11,6 +11,7 @@
 #include <QMainWindow>
 #include <QVBoxLayout>
 #include <QPointer>
+#include <QListWidgetItem>
 #include <QSystemTrayIcon>
 #include <QFileDialog>
 #include <QCloseEvent>
@@ -52,16 +53,16 @@ public:
     OutputHookerCore* getCore() const { return p_core; }
 
 public slots:
-    // Display data in the textBrowser when no game found
+    // Display data in the listWidget when no game found
     void displayNoGame();
 
-    // Display data in the textBrowser when game is connected to the TCP Socket
+    // Display data in the listWidget when game is connected to the TCP Socket
     void displayGame(QString gName, QString iName, bool iniGame, bool noGameFound);
 
-    // Display data in the textBrowser when empty game is found
+    // Display data in the listWidget when empty game is found
     void displayEmptyGame();
 
-    // Add output signals to the display data in textBrowser
+    // Add output signals to the display data in the listWidget
     void addSignalDisplay(const QString &sig, const QString &dat);
 
     // Update output signal values in display data
@@ -87,7 +88,10 @@ private slots:
     void readSocket();
 
     // Open DeviceWindow
-    void on_actionConnected_Devices_triggered();
+    void on_actionConnectedDevices_triggered();
+
+    // On close of DeviceWindow
+    void DeviceWindow_closed();
 
     // Open TestOutputWindow
     void on_actionTestOutputs_triggered();
@@ -119,6 +123,9 @@ private slots:
     // Open AboutWindow
     void on_actionAboutWindow_triggered();
 
+    // On close of AboutWindow
+    void AboutWindow_closed();
+
 protected:
     // Device connect or disconnect event
     bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result) override;
@@ -130,11 +137,8 @@ private:
     // Main Window
     Ui::OutputHooker *ui;
 
-    // Makes the default display data that is shown in the textBrowser
+    // Makes the default display data that is shown in the listWidget
     void makeTopDisplayText();
-
-    // Display the display data in the textBrowser
-    void displayText();
 
     // Local server for command line arguments
     QLocalServer *p_localServer;
@@ -165,11 +169,14 @@ private:
     // If a child window is closed, restart the core
     bool coreRunning;
 
-    // Used to display text on the textBrowser
-    QStringList displayTextList;
-
     // Maps where the Output data is in the display data
-    QMap<QString,quint8> signalNumberMap;
+    QMap<QString, QListWidgetItem*> signalItemMap;
+
+    // Pointer for the static info lines
+    QListWidgetItem* romItem = nullptr;
+    QListWidgetItem* fileItem = nullptr;
+    QListWidgetItem* orientationItem = nullptr;
+    QListWidgetItem* pauseItem = nullptr;
 
     // If the Windows Message system is connected or not
     bool isWinMsgConnected;
