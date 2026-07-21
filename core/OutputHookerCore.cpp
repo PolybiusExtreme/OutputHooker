@@ -1339,7 +1339,9 @@ bool OutputHookerCore::checkINICommands(QStringList commandsNotChk, quint16 line
             commandsNotChk[i].replace(" |","|");
             commandsNotChk[i].replace("| ","|");
 
-            subCommands = commandsNotChk[i].split('|');
+            // Split the same way executeINICommands() does, so that what gets checked
+            // here is exactly what will be run later
+            subCommands = commandsNotChk[i].split('|', Qt::SkipEmptyParts);
             subCmdCnt = subCommands.length();
 
             for (j = 0; j < subCmdCnt; j++)
@@ -1430,7 +1432,9 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
                 return false;
             }
 
-            comPortNumber = cmd[1].toUInt(&isNumber);
+            // Read into a uint first, as a quint8 would silently wrap a port number
+            // above 255 into a completely different port
+            uint portNumber = cmd[1].toUInt(&isNumber);
 
             if (!isNumber)
             {
@@ -1438,6 +1442,15 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
+
+            if (portNumber >= MAXCOMPORTS)
+            {
+                QString errorMsg = "Port number is above the highest supported port (" + QString::number(MAXCOMPORTS - 1) + ")!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[1] + "\nFile: " + iniFileName;
+                emit showErrorMessage("COM Port Open - Error", errorMsg);
+                return false;
+            }
+
+            comPortNumber = portNumber;
 
             // Add in COM port number for checks
             openComPortCheck << comPortNumber;
@@ -1451,6 +1464,14 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             // Split the settings into 4 strings = 1: Baud  2: Parity  3: Data  4: Stop
             settings = cmd[2].split('_', Qt::SkipEmptyParts);
+
+            if (settings.size() < 4)
+            {
+                QString errorMsg = "COM Port settings need all 4 parts (BAUD, PARITY, DATA, STOP)!\nLine Number: " + QString::number(lineNumber) + "\nSettings: " + cmd[2] + "\nFile: " + iniFileName;
+                emit showErrorMessage("COM Port Open - Error", errorMsg);
+                return false;
+            }
+
             settings[0].remove(BAUDREMOVE);
             settings[1].remove(PARITYREMOVE);
             settings[2].remove(DATAREMOVE);
@@ -1796,11 +1817,18 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
                 return false;
             }
 
-            cmd[2].toUInt(&isNumber);
+            uint lwPin = cmd[2].toUInt(&isNumber);
 
             if (!isNumber)
             {
                 QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + iniFileName;
+                emit showErrorMessage("LedWiz - Set Pin State - Error", errorMsg);
+                return false;
+            }
+
+            if (lwPin < 1 || lwPin > LEDWIZMAXPINS)
+            {
+                QString errorMsg = "Pin number is not in the range 1 - " + QString::number(LEDWIZMAXPINS) + "!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set Pin State - Error", errorMsg);
                 return false;
             }
@@ -1830,11 +1858,18 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
                 return false;
             }
 
-            cmd[2].toUInt(&isNumber);
+            uint lwPin = cmd[2].toUInt(&isNumber);
 
             if (!isNumber)
             {
                 QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + iniFileName;
+                emit showErrorMessage("LedWiz - Set Power Level - Error", errorMsg);
+                return false;
+            }
+
+            if (lwPin < 1 || lwPin > LEDWIZMAXPINS)
+            {
+                QString errorMsg = "Pin number is not in the range 1 - " + QString::number(LEDWIZMAXPINS) + "!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set Power Level - Error", errorMsg);
                 return false;
             }
@@ -1873,11 +1908,19 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
                 return false;
             }
 
-            cmd[2].toUInt(&isNumber);
+            uint lwPin = cmd[2].toUInt(&isNumber);
 
             if (!isNumber)
             {
                 QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + iniFileName;
+                emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
+                return false;
+            }
+
+            // An RGB LED uses the pin and the two channels after it
+            if (lwPin < 1 || lwPin > LEDWIZMAXPINS - 2)
+            {
+                QString errorMsg = "RGB pin number is not in the range 1 - " + QString::number(LEDWIZMAXPINS - 2) + "!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -2748,6 +2791,10 @@ void OutputHookerCore::executeINICommands(const QStringList &commands, const QSt
             currentCommand.replace("| ", "|");
             cmd = currentCommand.split('|', Qt::SkipEmptyParts);
 
+            // A line that is nothing but separators leaves no branch to pick
+            if (cmd.isEmpty())
+                continue;
+
             if (!value.isEmpty())
             {
                 quint16 dataNum = value.toUInt();
@@ -2776,10 +2823,21 @@ void OutputHookerCore::executeINICommands(const QStringList &commands, const QSt
                 // This will give 3 strings = 1: cmo/css  2: Com Port #  3: Settings
                 cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
 
+                // The INI file is checked when it is loaded, but %s% is replaced with the
+                // signal value only when the command runs, so a command that was complete
+                // at load time can still end up short here. Skip it instead of indexing
+                // past the end of the list
+                if (cmd.size() < 3)
+                    continue;
+
                 comPortNumber = cmd[1].toUInt();
 
                 // Split the Settings into 4 strings = 1: Baud  2: Parity  3: Data  4: Stop
                 settings = cmd[2].split('_', Qt::SkipEmptyParts);
+
+                if (settings.size() < 4)
+                    continue;
+
                 settings[0].remove(BAUDREMOVE);
                 settings[1].remove(PARITYREMOVE);
                 settings[2].remove(DATAREMOVE);
@@ -2816,6 +2874,9 @@ void OutputHookerCore::executeINICommands(const QStringList &commands, const QSt
                 // This will give 2 strings = 1: cmc  2: Com Port #
                 cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
 
+                if (cmd.size() < 2)
+                    continue;
+
                 quint8 comPortNumber = cmd[1].toUInt();
 
                 comPortClose(comPortNumber);
@@ -2825,6 +2886,10 @@ void OutputHookerCore::executeINICommands(const QStringList &commands, const QSt
             {
                 // This will give 3 strings = 1: cmw  2: Com Port #  3: Data
                 cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
+
+                // An empty %s% leaves "cmw <port>" with nothing to write
+                if (cmd.size() < 3)
+                    continue;
 
                 quint8 comPortNumber = cmd[1].toUInt();
 
@@ -2836,6 +2901,9 @@ void OutputHookerCore::executeINICommands(const QStringList &commands, const QSt
         {
             // This will give 6 Strings = 1: ghd  2: Device#  3: Vendor ID  4: Product ID  5: Number of Bytes  6: Bytes
             cmd = currentCommand.split(' ', Qt::SkipEmptyParts);
+
+            if (cmd.size() < 6)
+                continue;
 
             QString hidKey;
             bool isNumber;
@@ -2853,9 +2921,13 @@ void OutputHookerCore::executeINICommands(const QStringList &commands, const QSt
             quint16 valueNum = value.toUShort();
             QString upperDigit, lowerDigit;
 
+            // %s% needs digits from the value, so there has to be a value to take them from
+            if (valueMarkers > 0 && value.isEmpty())
+                continue;
+
             if (valueMarkers > 1)
             {
-                if (valueNum > 9)
+                if (valueNum > 9 && value.size() > 1)
                 {
                     upperDigit = value[0];
                     lowerDigit = value[1];
