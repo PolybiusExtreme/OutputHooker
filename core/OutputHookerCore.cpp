@@ -3367,10 +3367,12 @@ void OutputHookerCore::launchApplication(QString executable, QString parameter, 
 // Close Application
 void OutputHookerCore::closeApplication(QString executable)
 {
-    QProcess closeApp;
     executable.remove('"');
-    closeApp.start("taskkill", QStringList() << "/IM" << executable << "/F");
-    closeApp.waitForFinished();
+
+    // Started detached, as nothing here reads the result. waitForFinished() waits up to
+    // 30 seconds by default and does so on the thread the core runs on, so an 'apc'
+    // command from an INI file could hold up every other output until taskkill returned
+    QProcess::startDetached("taskkill", QStringList() << "/IM" << executable << "/F");
 }
 
 // Play WAV audio file
