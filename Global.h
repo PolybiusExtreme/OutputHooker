@@ -259,6 +259,36 @@ struct FunctionCommand
 // Windows message system
 #define WINMSGTIMERTIME         1000
 
+// Output source priority
+// Time the arbitration waits for the priority output source to report in, before
+// the output source that reported first is allowed to claim the output stream
+#define SOURCEARBITRATIONWAIT   300
+#define PRIORITYNETWORKNAME     "Network"
+#define PRIORITYWINMSGNAME      "Windows"
+
+// How the two output streams are handled
+#define METHODPRIORITYNAME      "Priority"
+#define METHODEXCLUSIVENAME     "Exclusive"
+#define METHODCONCURRENTNAME    "Concurrent"
+
+// Which output source a game came from
+enum OutputSource
+{
+    SourceNone,
+    SourceWinMsg,
+    SourceNetwork
+};
+
+// Priority  - the preferred output source wins, the other one is used if it does not report
+// Exclusive - only the preferred output source is used, the other one is never started
+// Concurrent- both output streams are processed at the same time
+enum OutputProcessingMethod
+{
+    MethodPriority,
+    MethodExclusive,
+    MethodConcurrent
+};
+
 // TCP Socket
 #define TCPHOSTPORT             8000
 #define TCPTIMERTIME            2000

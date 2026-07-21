@@ -14,6 +14,8 @@
 #include <QScreen>
 #include <QThread>
 
+#include "../Global.h"
+
 class OutputHookerConfig : public QObject
 {
     Q_OBJECT
@@ -39,6 +41,14 @@ public:
     bool getUseMultiThreading();
     void setUseMultiThreading(bool umThreading);
 
+    // Output source that is preferred, when both output streams report a game
+    OutputSource getOutputSourcePriority();
+    void setOutputSourcePriority(OutputSource osPriority);
+
+    // How the two output streams are handled
+    OutputProcessingMethod getOutputProcessingMethod();
+    void setOutputProcessingMethod(OutputProcessingMethod opMethod);
+
     // Get COM Port placeholders
     QMap<QString, QString> getComPortPlaceholders();
 
@@ -55,6 +65,8 @@ private:
     bool addNewOutputsToDefaultINI;
     bool useMultiThreading;
     bool bypassSerialWriteChecks;
+    OutputSource outputSourcePriority;
+    OutputProcessingMethod outputProcessingMethod;
 
     // QMap - COM Port placeholders
     QMap<QString, QString> comPortPlaceholders;
