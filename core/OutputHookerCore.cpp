@@ -393,7 +393,9 @@ void OutputHookerCore::setWinID(HWND handle)
 // Execute command line commands
 void OutputHookerCore::executeCommandLineCommands(const QStringList &commands, const QString &value)
 {
-    executeINICommands(commands, value);
+    // These commands do not come from an INI file, so they have not been through
+    // resolveComPortPlaceholders() while loading and are resolved here instead
+    executeINICommands(resolveComPortPlaceholders(commands), value);
 }
 
 // Execute command from TestOutputWindow
@@ -1193,7 +1195,9 @@ void OutputHookerCore::loadINIFile(const QString &filePath)
 
             if (!commands.isEmpty())
             {
-                tempSplit = splitCommands(commands);
+                // Resolved once here, so executeINICommands() does not have to walk the
+                // placeholder map for every command of every output while a game runs
+                tempSplit = resolveComPortPlaceholders(splitCommands(commands));
 
                 // Process RefreshTime value immediately and do not check it in checkINICommands
                 if (isKeyStates && key.compare("RefreshTime", Qt::CaseInsensitive) == 0)
@@ -2704,6 +2708,35 @@ void OutputHookerCore::processINICommands(QString signalName, QString value, boo
     }
 }
 
+// Replace the COM Port placeholders with the COM Port numbers
+QStringList OutputHookerCore::resolveComPortPlaceholders(const QStringList &commands)
+{
+    if (comPortPlaceholders.isEmpty())
+        return commands;
+
+    QStringList resolved;
+    resolved.reserve(commands.size());
+
+    for (const QString &command : commands)
+    {
+        QString current = command;
+
+        QMapIterator<QString, QString> it(comPortPlaceholders);
+        while (it.hasNext())
+        {
+            it.next();
+            if (current.contains(it.key()))
+            {
+                current.replace(it.key(), it.value());
+            }
+        }
+
+        resolved.append(current);
+    }
+
+    return resolved;
+}
+
 // Execute commands based on INI file
 void OutputHookerCore::executeINICommands(const QStringList &commands, const QString &value)
 {
@@ -2713,18 +2746,9 @@ void OutputHookerCore::executeINICommands(const QStringList &commands, const QSt
 
     for (int i = 0; i < commands.size(); i++)
     {
+        // The COM Port placeholders are already resolved, either when the INI file was
+        // loaded or in executeCommandLineCommands()
         QString currentCommand = commands[i];
-
-        // Replace COM Port placeholder with COM Port number
-        QMapIterator<QString, QString> it(comPortPlaceholders);
-        while (it.hasNext())
-        {
-            it.next();
-            if (currentCommand.contains(it.key()))
-            {
-                currentCommand.replace(it.key(), it.value());
-            }
-        }
 
         // Branching logic with "|"
         if (currentCommand.contains('|'))
