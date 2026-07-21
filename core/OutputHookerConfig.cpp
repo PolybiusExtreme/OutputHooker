@@ -21,6 +21,7 @@ OutputHookerConfig::OutputHookerConfig(QObject *parent)
     bypassSerialWriteChecks = false;
     outputSourcePriority = SourceNetwork;
     outputProcessingMethod = MethodPriority;
+    startMinimized = false;
 
     // Define save file and the path
     settingsFile = QApplication::applicationDirPath() + "/" SETTINGSFILE;
@@ -51,6 +52,7 @@ void OutputHookerConfig::saveSettings()
         methodName = METHODCONCURRENTNAME;
 
     settings.setValue("OutputProcessingMethod", methodName);
+    settings.setValue("StartMinimized", startMinimized);
     settings.endGroup();
 
     settings.beginGroup("COM_Ports");
@@ -92,6 +94,7 @@ void OutputHookerConfig::loadSettings()
     else
         outputProcessingMethod = MethodPriority;
 
+    startMinimized = (settings.value("StartMinimized", startMinimized).toBool());
     settings.endGroup();
 
     comPortPlaceholders.clear();
@@ -158,6 +161,44 @@ OutputProcessingMethod OutputHookerConfig::getOutputProcessingMethod()
 void OutputHookerConfig::setOutputProcessingMethod(OutputProcessingMethod opMethod)
 {
     outputProcessingMethod = opMethod;
+}
+
+bool OutputHookerConfig::getStartMinimized()
+{
+    return startMinimized;
+}
+
+void OutputHookerConfig::setStartMinimized(bool sMinimized)
+{
+    startMinimized = sMinimized;
+}
+
+bool OutputHookerConfig::getAutostartWithSystem()
+{
+    QSettings runKey(AUTOSTARTREGKEY, QSettings::NativeFormat);
+
+    // Only report autostart as on if the entry points at this executable. A stale entry
+    // from a copy that has been moved or deleted would never start OutputHooker
+    QString registered = QDir::toNativeSeparators(runKey.value(AUTOSTARTVALUENAME).toString()).remove('"');
+    QString thisExe = QDir::toNativeSeparators(QApplication::applicationFilePath());
+
+    return (registered.compare(thisExe, Qt::CaseInsensitive) == 0);
+}
+
+void OutputHookerConfig::setAutostartWithSystem(bool awSystem)
+{
+    QSettings runKey(AUTOSTARTREGKEY, QSettings::NativeFormat);
+
+    if (awSystem)
+    {
+        // Quoted, as the path to the executable can contain spaces
+        QString thisExe = QDir::toNativeSeparators(QApplication::applicationFilePath());
+        runKey.setValue(AUTOSTARTVALUENAME, "\"" + thisExe + "\"");
+    }
+    else
+    {
+        runKey.remove(AUTOSTARTVALUENAME);
+    }
 }
 
 QMap<QString, QString> OutputHookerConfig::getComPortPlaceholders()

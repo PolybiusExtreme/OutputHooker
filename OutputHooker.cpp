@@ -58,9 +58,7 @@ OutputHooker::OutputHooker(QWidget *parent)
     restoreAction = new QAction("OutputHooker", this);
     // restoreAction->setIcon(QIcon(":/icon/OutputHooker.ico"));
     connect(restoreAction, &QAction::triggered, this, [this](){
-        this->show();
-        this->setWindowState(Qt::WindowActive);
-        p_core->mainWindowState(false);
+        showMainWindow();
     });
     trayIconMenu->addAction(restoreAction);
     trayIconMenu->addSeparator();
@@ -83,9 +81,7 @@ OutputHooker::OutputHooker(QWidget *parent)
     connect(trayIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason)
     {
         if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick){
-            this->show();
-            this->setWindowState(Qt::WindowActive);
-            p_core->mainWindowState(false);
+            showMainWindow();
         }
     });
 
@@ -136,6 +132,14 @@ OutputHooker::OutputHooker(QWidget *parent)
         ui->actionMethodConcurrent->setChecked(true);
     else
         ui->actionMethodPriority->setChecked(true);
+
+    // Get "Start OutputHooker Minimized" setting
+    startMinimized = p_config->getStartMinimized();
+    ui->actionStartMinimized->setChecked(startMinimized);
+
+    // The autostart state is read back from the registry, so an entry removed outside of
+    // OutputHooker (Task Manager, msconfig) is reflected here
+    ui->actionAutostart->setChecked(p_config->getAutostartWithSystem());
 
     // Grey out the preferred output source, if both output streams are processed
     updateOutputPriorityMenu();
@@ -528,6 +532,33 @@ void OutputHooker::applyOutputProcessingMethod(OutputProcessingMethod opMethod)
 void OutputHooker::updateOutputPriorityMenu()
 {
     ui->menuOutputPriority->setEnabled(outputProcessingMethod != MethodConcurrent);
+}
+
+// Change the start in the system tray setting
+void OutputHooker::on_actionStartMinimized_triggered()
+{
+    // Only changes how OutputHooker starts next time, so the core keeps running
+    startMinimized = ui->actionStartMinimized->isChecked();
+    p_config->setStartMinimized(startMinimized);
+    p_config->saveSettings();
+}
+
+// Change the start with Windows setting
+void OutputHooker::on_actionAutostart_triggered()
+{
+    // Written straight to the registry Run key, nothing is kept in the INI file
+    p_config->setAutostartWithSystem(ui->actionAutostart->isChecked());
+
+    // Show what the registry actually ended up with, in case the write was refused
+    ui->actionAutostart->setChecked(p_config->getAutostartWithSystem());
+}
+
+// Show the main window and let the core know it is no longer minimized
+void OutputHooker::showMainWindow()
+{
+    show();
+    setWindowState(Qt::WindowActive);
+    p_core->mainWindowState(false);
 }
 
 // Open the default.ini in EditorWindow

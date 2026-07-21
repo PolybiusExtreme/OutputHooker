@@ -99,6 +99,9 @@
     <addaction name="actionNotification"/>
     <addaction name="actionDefaultINI"/>
     <addaction name="separator"/>
+    <addaction name="actionStartMinimized"/>
+    <addaction name="actionAutostart"/>
+    <addaction name="separator"/>
     <addaction name="menuProcessingMethod"/>
     <addaction name="menuOutputPriority"/>
    </widget>
@@ -208,6 +211,22 @@
    </property>
    <property name="text">
     <string>Concurrent</string>
+   </property>
+  </action>
+  <action name="actionStartMinimized">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Start OutputHooker Minimized</string>
+   </property>
+  </action>
+  <action name="actionAutostart">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Autostart OutputHooker with System</string>
    </property>
   </action>
  </widget>

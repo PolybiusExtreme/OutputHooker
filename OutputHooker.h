@@ -53,6 +53,12 @@ public:
     // getCore needed for DeviceWindow
     OutputHookerCore* getCore() const { return p_core; }
 
+    // If OutputHooker should start in the system tray instead of showing the window
+    bool getStartMinimized() const { return startMinimized; }
+
+    // Show the main window and let the core know it is no longer minimized
+    void showMainWindow();
+
 public slots:
     // Display data in the listWidget when no game found
     void displayNoGame();
@@ -120,6 +126,12 @@ private slots:
     void on_actionMethodExclusive_triggered();
     void on_actionMethodConcurrent_triggered();
 
+    // Change the start in the system tray setting
+    void on_actionStartMinimized_triggered();
+
+    // Change the start with Windows setting
+    void on_actionAutostart_triggered();
+
     // Open the default.ini in EditorWindow
     void on_actionEditDefaultINI_triggered();
 
@@ -176,6 +188,7 @@ private:
     // Bool settings
     bool useNewOutputsNotification;
     bool addNewOutputsToDefaultINI;
+    bool startMinimized;
 
     // Output source that is preferred
     OutputSource outputSourcePriority;

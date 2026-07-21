@@ -21,6 +21,11 @@
 // Settings
 #define SETTINGSFILE            "OutputHooker.ini"
 
+// Autostart with Windows. The registry Run key is the only place this is stored, so
+// removing the entry outside of OutputHooker is picked up the next time it starts
+#define AUTOSTARTREGKEY         "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+#define AUTOSTARTVALUENAME      "OutputHooker"
+
 // INI game & default files
 #define INIFILEDIR              "ini"
 #define ENDOFINIFILE            ".ini"

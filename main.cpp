@@ -53,6 +53,13 @@ int main(int argc, char *argv[])
         {
             QApplication::setStyle(QStyleFactory::create("Fusion"));
             OutputHooker w;
+
+            // Show the window unless OutputHooker is set to start in the system tray.
+            // The command line branch above never shows it, as it only runs the given
+            // commands and quits again
+            if (!w.getStartMinimized())
+                w.showMainWindow();
+
             return a.exec();
         }
     }
