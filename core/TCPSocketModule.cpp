@@ -48,10 +48,11 @@ TCPSocketModule::~TCPSocketModule()
 // Connect the TCP Socket
 void TCPSocketModule::tcpConnect()
 {
-    if (stopConnecting)
-    {
-        return;
-    }
+    // Clear the stop that tcpDisconnect() set, so the TCP Socket connects again after the
+    // OutputHookerCore has been stopped and started. WinMsgModule::connectWinMsg() does
+    // the same. The flag still keeps tcpSocketDisconnected() and tcpSocketError() from
+    // starting the reconnect timer after a deliberate disconnect
+    stopConnecting = false;
 
     if (!isConnected && !isConnecting)
     {
