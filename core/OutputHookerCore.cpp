@@ -1273,7 +1273,13 @@ void OutputHookerCore::loadINIFile(const QString &filePath)
     iniFile.close();
     iniFileLoaded = true;
 
-    if (targetFilePath.contains(gameName + ENDOFINIFILE, Qt::CaseInsensitive) || !isGameINI)
+    // Only run the game start commands after the file that completes the configuration
+    // has been loaded, which is always the game INI file. If the game has none, then
+    // newINIFile() creates one from the template and loads it right after default.ini,
+    // so waiting for it keeps the commands from running twice.
+    // The file name is compared in full, as contains() would also match a game whose
+    // name happens to be the end of another INI file name ("ault" in "default.ini")
+    if (targetFilePath.compare(iniPath + "/" + gameName + ENDOFINIFILE, Qt::CaseInsensitive) == 0)
     {
         // Timer logic for KeyStates
         if (!keyStatesAndCommands.isEmpty())
