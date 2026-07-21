@@ -64,9 +64,9 @@ void OutputHookerConfig::loadSettings()
     QSettings settings(settingsFile, QSettings::Format::IniFormat);
 
     settings.beginGroup("OutputHooker");
-    useNewOutputsNotification = (settings.value("NotificationOnNewOutputs").toBool());
-    addNewOutputsToDefaultINI = (settings.value("AddNewOutputsToDefaultINI").toBool());
-    useMultiThreading = (settings.value("MultiThreading").toBool());
+    useNewOutputsNotification = (settings.value("NotificationOnNewOutputs", useNewOutputsNotification).toBool());
+    addNewOutputsToDefaultINI = (settings.value("AddNewOutputsToDefaultINI", addNewOutputsToDefaultINI).toBool());
+    useMultiThreading = (settings.value("MultiThreading", useMultiThreading).toBool());
     settings.endGroup();
 
     comPortPlaceholders.clear();
@@ -80,7 +80,7 @@ void OutputHookerConfig::loadSettings()
     settings.endGroup();
 
     settings.beginGroup("Debug");
-    bypassSerialWriteChecks = (settings.value("BypassSerialWriteChecks").toBool());
+    bypassSerialWriteChecks = (settings.value("BypassSerialWriteChecks", bypassSerialWriteChecks).toBool());
     settings.endGroup();
 }
 
