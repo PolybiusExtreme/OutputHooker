@@ -85,6 +85,14 @@ bool COMPortModule::reconnectComPort(quint8 comPortNum)
 
 void COMPortModule::connectComPort(const quint8 &comPortNum, const QString &comPortName, const qint32 &comPortBaud, const quint8 &comPortData, const quint8 &comPortParity, const quint8 &comPortStop, const quint8 &comPortFlow, const QString &comPortPath, const bool &isWriteOnly)
 {
+    // The COM Port number indexes the port arrays, so it has to be inside them.
+    // Windows can hand out port numbers well above the array size
+    if (comPortNum >= MAXCOMPORTS)
+    {
+        emit showErrorMessage("Invalid COM Port!", "COM Port " + QString::number(comPortNum) + " is above the highest supported port (" + QString::number(MAXCOMPORTS - 1) + ")!");
+        return;
+    }
+
     // Check if COM Port is open
     if (comPortOpen[comPortNum])
     {
@@ -323,6 +331,9 @@ void COMPortModule::connectComPort(const quint8 &comPortNum, const QString &comP
 
 void COMPortModule::disconnectComPort(const quint8 &comPortNum)
 {
+    if (comPortNum >= MAXCOMPORTS)
+        return;
+
     // Check if COM Port is open
     if (comPortOpen[comPortNum] == true)
     {
@@ -339,6 +350,9 @@ void COMPortModule::disconnectComPort(const quint8 &comPortNum)
 
 void COMPortModule::writeData(const quint8 &comPortNum, const QByteArray &writeData)
 {
+    if (comPortNum >= MAXCOMPORTS)
+        return;
+
     // Check if COM Port is open
     if (comPortOpen[comPortNum] == true)
     {
