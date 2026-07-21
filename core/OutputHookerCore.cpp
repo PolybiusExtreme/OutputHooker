@@ -7,6 +7,8 @@
 
 #include "OutputHookerCore.h"
 
+#include <QFileInfo>
+
 #include "../Global.h"
 
 OutputHookerCore::OutputHookerCore(OutputHookerConfig *ohConfig, QObject *parent)
@@ -1324,6 +1326,10 @@ bool OutputHookerCore::checkINICommands(QStringList commandsNotChk, quint16 line
     bool isCommandsGood = true;
     quint8 i, j;
 
+    // Name of the INI file the commands came from. default.ini and the game INI file are
+    // both checked here, so reporting the game name would send the user to the wrong file
+    const QString iniFileName = QFileInfo(filePathName).fileName();
+
     for (i = 0; i < commandCount; i++)
     {
         command = commandsNotChk[i];
@@ -1359,7 +1365,7 @@ bool OutputHookerCore::checkINICommands(QStringList commandsNotChk, quint16 line
 
                 if (!isCommandsGood)
                 {
-                    QString errorMsg = "Loaded INI file contains a faulty command!\nLine Number: " + QString::number(lineNumber) + "\nCommand: " + subCommands[j] + "\nFile: " + gameName + ENDOFINIFILE;
+                    QString errorMsg = "Loaded INI file contains a faulty command!\nLine Number: " + QString::number(lineNumber) + "\nCommand: " + subCommands[j] + "\nFile: " + iniFileName;
                     emit showErrorMessage("Error", errorMsg);
                     return false;
                 }
@@ -1386,7 +1392,7 @@ bool OutputHookerCore::checkINICommands(QStringList commandsNotChk, quint16 line
 
             if (!isCommandsGood)
             {
-                QString errorMsg = "Loaded INI file contains a faulty command!\nLine Number: " + QString::number(lineNumber) + "\nCommand: " + command + "\nFile: "+ gameName + ENDOFINIFILE;
+                QString errorMsg = "Loaded INI file contains a faulty command!\nLine Number: " + QString::number(lineNumber) + "\nCommand: " + command + "\nFile: " + iniFileName;
                 emit showErrorMessage("Error", errorMsg);
                 return false;
             }
@@ -1405,6 +1411,9 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
     bool isNumber;
     quint8 i;
 
+    // Name of the INI file the command came from, so the error points at the right file
+    const QString iniFileName = QFileInfo(filePathName).fileName();
+
     // COM port commands, starts with "cm" or "cs"
     if (commandNotChk.startsWith(PORTCMDSTART1, Qt::CaseInsensitive) == true || commandNotChk.startsWith(PORTCMDSTART2, Qt::CaseInsensitive) == true)
     {
@@ -1416,7 +1425,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 3)
             {
-                QString errorMsg = "Command requires 2 parameters (Port, Settings)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 2 parameters (Port, Settings)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
@@ -1425,7 +1434,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Port number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPort: "+cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Port number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPort: "+cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
@@ -1435,7 +1444,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd[2].isEmpty())
             {
-                QString errorMsg = "COM Port settings are not set!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "COM Port settings are not set!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
@@ -1449,7 +1458,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (settings[0].isEmpty())
             {
-                QString errorMsg = "Baud rate value is empty!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Baud rate value is empty!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
@@ -1458,7 +1467,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Baud rate is not a number!\nLine Number: " + QString::number(lineNumber) + "\nBaud rate: " + settings[0] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Baud rate is not a number!\nLine Number: " + QString::number(lineNumber) + "\nBaud rate: " + settings[0] + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
@@ -1473,14 +1482,14 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!chkSetting)
             {
-                QString errorMsg = "Baud rate is not a correct rate!\nLine Number: " + QString::number(lineNumber) + "\nBaud rate: " + settings[0] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Baud rate is not a correct rate!\nLine Number: " + QString::number(lineNumber) + "\nBaud rate: " + settings[0] + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
 
             if (settings[1].isEmpty())
             {
-                QString errorMsg = "Parity value is empty!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Parity value is empty!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
@@ -1497,14 +1506,14 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
                 portTemp.parity = 5;
             else
             {
-                QString errorMsg = "Parity is not a correct char (N,E,O,S,M)!\nLine Number: " + QString::number(lineNumber) + "\nParity char: " + settings[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Parity is not a correct char (N,E,O,S,M)!\nLine Number: " + QString::number(lineNumber) + "\nParity char: " + settings[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
 
             if (settings[2].isEmpty())
             {
-                QString errorMsg = "Data bits value is empty!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Data bits value is empty!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
@@ -1513,7 +1522,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Data bits is not a number!\nLine Number: " + QString::number(lineNumber) + "\nData bits: " + settings[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Data bits is not a number!\nLine Number: " + QString::number(lineNumber) + "\nData bits: " + settings[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
@@ -1521,7 +1530,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
             // Can be 5-8
             if (portTemp.data < 5 || portTemp.data > 8)
             {
-                QString errorMsg = "Data bits is not in range (5-8)!\nLine Number: " + QString::number(lineNumber) + "\nData bits: " + settings[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Data bits is not in range (5-8)!\nLine Number: " + QString::number(lineNumber) + "\nData bits: " + settings[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
@@ -1540,7 +1549,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Stop bits is not a number!\nLine Number: " + QString::number(lineNumber) + "\nStop bits: " + settings[3] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Stop bits is not a number!\nLine Number: " + QString::number(lineNumber) + "\nStop bits: " + settings[3] + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
@@ -1548,7 +1557,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
             // Can be 1-3
             if (portTemp.stop == 0 || portTemp.stop > 3)
             {
-                QString errorMsg = "Stop bits is not in range (1,1.5,2)!\nLine Number: " + QString::number(lineNumber) + "\nData bits: " + settings[3] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Stop bits is not in range (1,1.5,2)!\nLine Number: " + QString::number(lineNumber) + "\nData bits: " + settings[3] + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Open - Error", errorMsg);
                 return false;
             }
@@ -1565,7 +1574,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 2)
             {
-                QString errorMsg = "Command requires 1 parameter (Port)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 1 parameter (Port)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Close - Error", errorMsg);
                 return false;
             }
@@ -1574,7 +1583,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Port number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Port number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Close - Error", errorMsg);
                 return false;
             }
@@ -1583,7 +1592,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
             {
                 if (!openComPortCheck.contains(comPortNumber))
                 {
-                    QString errorMsg = "Port number doesn't match any open port number(s)!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                    QString errorMsg = "Port number doesn't match any open port number(s)!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[1] + "\nFile: " + iniFileName;
                     emit showErrorMessage("COM Port Close - Error", errorMsg);
                     return false;
                 }
@@ -1598,7 +1607,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
             // This will give 4 strings = 1: cmr  2: Com Port #  3: Buffer # 4: length
             // cmd = commands[i].split(' ', Qt::SkipEmptyParts);
 
-            QString errorMsg = "Reads are not implemented!\nPlease remove the read command!\nLine Number: " + QString::number(lineNumber) + "\nRead command: " + commandNotChk + "\nFile: " + gameName + ENDOFINIFILE;
+            QString errorMsg = "Reads are not implemented!\nPlease remove the read command!\nLine Number: " + QString::number(lineNumber) + "\nRead command: " + commandNotChk + "\nFile: " + iniFileName;
             emit showErrorMessage("COM Port Read - Error", errorMsg);
         }
         // COM port write command
@@ -1609,7 +1618,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 3)
             {
-                QString errorMsg = "Command requires 2 parameters (Port, Data)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 2 parameters (Port, Data)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Write - Error", errorMsg);
                 return false;
             }
@@ -1618,7 +1627,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Port number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Port number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("COM Port Write - Error", errorMsg);
                 return false;
             }
@@ -1627,7 +1636,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
             {
                 if (!openComPortCheck.contains(comPortNumber))
                 {
-                    QString errorMsg = "Port number doesn't match any open port number(s)!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                    QString errorMsg = "Port number doesn't match any open port number(s)!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[1] + "\nFile: " + iniFileName;
                     emit showErrorMessage("COM Port Write - Error", errorMsg);
                     return false;
                 }
@@ -1645,7 +1654,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
         if (cmd.count() != 6)
         {
-            QString errorMsg = "Command requires 5 parameters (Device, Vendor ID, Product ID, Number of Bytes, Bytes)!\nLine Number: " + QString::number(lineNumber)+"\nCommand: " + commandNotChk + "\nFile: " + filePathName;
+            QString errorMsg = "Command requires 5 parameters (Device, Vendor ID, Product ID, Number of Bytes, Bytes)!\nLine Number: " + QString::number(lineNumber)+"\nCommand: " + commandNotChk + "\nFile: " + iniFileName;
             emit showErrorMessage("USB HID Write - Error", errorMsg);
             return false;
         }
@@ -1657,7 +1666,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
         if (!isNumber)
         {
-            QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice Number: " + cmd[1] + "\nFile: " + filePathName;
+            QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice Number: " + cmd[1] + "\nFile: " + iniFileName;
             emit showErrorMessage("USB HID Write - Error", errorMsg);
             return false;
         }
@@ -1670,14 +1679,14 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Vendor ID number is not a hex number!\nLine Number: " + QString::number(lineNumber) + "\nVendor ID Number: " + cmd[2] + "\nFile: " + filePathName;
+                QString errorMsg = "Vendor ID number is not a hex number!\nLine Number: " + QString::number(lineNumber) + "\nVendor ID Number: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("USB HID Write - Error", errorMsg);
                 return false;
             }
         }
         else
         {
-            QString errorMsg = "Vendor ID doesn't have the needed &H in front of the number!\nLine Number: " + QString::number(lineNumber) + "\nVendor ID: " + cmd[2] + "\nFile: " + filePathName;
+            QString errorMsg = "Vendor ID doesn't have the needed &H in front of the number!\nLine Number: " + QString::number(lineNumber) + "\nVendor ID: " + cmd[2] + "\nFile: " + iniFileName;
             emit showErrorMessage("USB HID Write - Error", errorMsg);
             return false;
         }
@@ -1690,14 +1699,14 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Product ID number is not a hex number!\nLine Number: " + QString::number(lineNumber) + "\nProduct ID Number: " + cmd[3] + "\nFile: " + filePathName;
+                QString errorMsg = "Product ID number is not a hex number!\nLine Number: " + QString::number(lineNumber) + "\nProduct ID Number: " + cmd[3] + "\nFile: " + iniFileName;
                 emit showErrorMessage("USB HID Write - Error", errorMsg);
                 return false;
             }
         }
         else
         {
-            QString errorMsg = "Product ID doesn't have the needed &H in front of the number!\nLine Number: " + QString::number(lineNumber) + "\nProduct ID: " + cmd[3]  +"\nFile: " + filePathName;
+            QString errorMsg = "Product ID doesn't have the needed &H in front of the number!\nLine Number: " + QString::number(lineNumber) + "\nProduct ID: " + cmd[3]  +"\nFile: " + iniFileName;
             emit showErrorMessage("USB HID Write - Error", errorMsg);
             return false;
         }
@@ -1706,7 +1715,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
         if (!foundHID)
         {
-            QString errorMsg = "Could not find the HID with the Vendor ID, Product ID and device number!\nLine Number: " + QString::number(lineNumber) + "\nProductID: " + cmd[3] + "\nFile: " + filePathName;
+            QString errorMsg = "Could not find the HID with the Vendor ID, Product ID and device number!\nLine Number: " + QString::number(lineNumber) + "\nProductID: " + cmd[3] + "\nFile: " + iniFileName;
             emit showErrorMessage("USB HID Write - Error", errorMsg);
             return false;
         }
@@ -1715,7 +1724,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
         if (!isNumber)
         {
-            QString errorMsg = "Number of Bytes is not a number.\nLine Number: " + QString::number(lineNumber) + "\nNumber of Bytes: " + cmd[4] + "\nFile: " + filePathName;
+            QString errorMsg = "Number of Bytes is not a number.\nLine Number: " + QString::number(lineNumber) + "\nNumber of Bytes: " + cmd[4] + "\nFile: " + iniFileName;
             emit showErrorMessage("USB HID Write - Error", errorMsg);
             return false;
         }
@@ -1724,7 +1733,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
         if (settings.count() != byteNumber)
         {
-            QString errorMsg = "Number of Bytes doesn't equal number of data bytes!\nLine Number: " + QString::number(lineNumber) + "\nNumber of Bytes: " + cmd[4] + "\nData Bytes: " + cmd[5] + "\nFile: " + filePathName;
+            QString errorMsg = "Number of Bytes doesn't equal number of data bytes!\nLine Number: " + QString::number(lineNumber) + "\nNumber of Bytes: " + cmd[4] + "\nData Bytes: " + cmd[5] + "\nFile: " + iniFileName;
             emit showErrorMessage("USB HID Write - Error", errorMsg);
             return false;
         }
@@ -1739,21 +1748,21 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
                 if (!isNumber)
                 {
-                    QString errorMsg = "Data Byte is not a hex number!\nLine Number: " + QString::number(lineNumber) + "\nData Byte: " + settings[i] + "\nFile: " + filePathName;
+                    QString errorMsg = "Data Byte is not a hex number!\nLine Number: " + QString::number(lineNumber) + "\nData Byte: " + settings[i] + "\nFile: " + iniFileName;
                     emit showErrorMessage("USB HID Write - Error", errorMsg);
                     return false;
                 }
 
                 if (byteData > 255)
                 {
-                    QString errorMsg = "Data byte is out of range (00 - FF)!\nLine Number: " + QString::number(lineNumber) + "\nData Byte: " + settings[i] + "\nFile: " + filePathName;
+                    QString errorMsg = "Data byte is out of range (00 - FF)!\nLine Number: " + QString::number(lineNumber) + "\nData Byte: " + settings[i] + "\nFile: " + iniFileName;
                     emit showErrorMessage("USB HID Write - Error", errorMsg);
                     return false;
                 }
             }
             else
             {
-                QString errorMsg = "Data Byte doesn't have the needed &h in front of the number!\nLine Number: " + QString::number(lineNumber) + "\nData Byte: " + settings[i] + "\nFile: " + filePathName;
+                QString errorMsg = "Data Byte doesn't have the needed &h in front of the number!\nLine Number: " + QString::number(lineNumber) + "\nData Byte: " + settings[i] + "\nFile: " + iniFileName;
                 emit showErrorMessage("USB HID Write - Error", errorMsg);
                 return false;
             }
@@ -1773,7 +1782,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 4)
             {
-                QString errorMsg = "Command requires 3 parameters (ID, Pin, State)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 3 parameters (ID, Pin, State)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set Pin State - Error", errorMsg);
                 return false;
             }
@@ -1782,7 +1791,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set Pin State - Error", errorMsg);
                 return false;
             }
@@ -1791,7 +1800,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set Pin State - Error", errorMsg);
                 return false;
             }
@@ -1807,7 +1816,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 4)
             {
-                QString errorMsg = "Command requires 3 parameters (ID, Pin, Power Level)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 3 parameters (ID, Pin, Power Level)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set Power Level - Error", errorMsg);
                 return false;
             }
@@ -1816,7 +1825,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set Power Level - Error", errorMsg);
                 return false;
             }
@@ -1825,7 +1834,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set Power Level - Error", errorMsg);
                 return false;
             }
@@ -1834,7 +1843,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Power level is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPower Level: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Power level is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPower Level: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set Power Level - Error", errorMsg);
                 return false;
             }
@@ -1850,7 +1859,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 6)
             {
-                QString errorMsg = "Command requires 5 parameters (ID, Pin, Red Value, Green Value, Blue Value)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 5 parameters (ID, Pin, Red Value, Green Value, Blue Value)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -1859,7 +1868,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -1868,7 +1877,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -1877,7 +1886,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Red value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nRed Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Red value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nRed Value: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -1886,7 +1895,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Green value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nGreen Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Green value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nGreen Value: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -1895,7 +1904,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Blue value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nBlue Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Blue value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nBlue Value: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -1911,7 +1920,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 3)
             {
-                QString errorMsg = "Command requires 2 parameters (ID, Pulse Rate)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 2 parameters (ID, Pulse Rate)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set Pulse Rate - Error", errorMsg);
                 return false;
             }
@@ -1920,7 +1929,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set Pulse Rate - Error", errorMsg);
                 return false;
             }
@@ -1929,7 +1938,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Pulse rate is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPulse Rate: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Pulse rate is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPulse Rate: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Set Pulse Rate - Error", errorMsg);
                 return false;
             }
@@ -1945,7 +1954,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 2)
             {
-                QString errorMsg = "Command requires 1 parameter (ID)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 1 parameter (ID)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Kill All LEDs - Error", errorMsg);
                 return false;
             }
@@ -1954,7 +1963,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice Number: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice Number: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("LedWiz - Kill All LEDs - Error", errorMsg);
                 return false;
             }
@@ -1974,7 +1983,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 4)
             {
-                QString errorMsg = "Command requires 3 parameters (ID, Pin, State)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 3 parameters (ID, Pin, State)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set LED State - Error", errorMsg);
                 return false;
             }
@@ -1983,7 +1992,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set LED State - Error", errorMsg);
                 return false;
             }
@@ -1992,7 +2001,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set LED State - Error", errorMsg);
                 return false;
             }
@@ -2008,7 +2017,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 4)
             {
-                QString errorMsg = "Command requires 3 parameters (ID, Pin, Intensity)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 3 parameters (ID, Pin, Intensity)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set LED Intensity - Error", errorMsg);
                 return false;
             }
@@ -2017,7 +2026,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set LED Intensity - Error", errorMsg);
                 return false;
             }
@@ -2026,7 +2035,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set LED Intensity - Error", errorMsg);
                 return false;
             }
@@ -2035,7 +2044,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Intensity value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nValue: " + cmd[3] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Intensity value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nValue: " + cmd[3] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set LED Intensity - Error", errorMsg);
                 return false;
             }
@@ -2051,7 +2060,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 3)
             {
-                QString errorMsg = "Command requires 2 parameters (ID, Fade Time)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 2 parameters (ID, Fade Time)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set LED Fade Time - Error", errorMsg);
                 return false;
             }
@@ -2060,7 +2069,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set LED Fade Time - Error", errorMsg);
                 return false;
             }
@@ -2069,7 +2078,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Fade time value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nValue: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Fade time value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nValue: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set LED Fade Time - Error", errorMsg);
                 return false;
             }
@@ -2085,7 +2094,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 6)
             {
-                QString errorMsg = "Command requires 5 parameters (ID, Pin, Red Value, Green Value, Blue Value)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 5 parameters (ID, Pin, Red Value, Green Value, Blue Value)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -2094,7 +2103,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -2103,7 +2112,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Pin number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPin: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -2112,7 +2121,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Red value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nRed Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Red value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nRed Value: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -2121,7 +2130,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Green value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nGreen Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Green value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nGreen Value: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -2130,7 +2139,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Blue value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nBlue Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Blue value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nBlue Value: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Set RGB LED Color - Error", errorMsg);
                 return false;
             }
@@ -2146,7 +2155,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 2)
             {
-                QString errorMsg = "Command requires 1 parameter (ID)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 1 parameter (ID)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Kill All LEDs - Error", errorMsg);
                 return false;
             }
@@ -2155,7 +2164,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice Number: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice Number: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Ultimarc - Kill All LEDs - Error", errorMsg);
                 return false;
             }
@@ -2175,7 +2184,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 3)
             {
-                QString errorMsg = "Command requires 2 parameters (Device, State)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 2 parameters (Device, State)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("Force Feedback - Error", errorMsg);
                 return false;
             }
@@ -2184,7 +2193,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Force Feedback - Error", errorMsg);
                 return false;
             }
@@ -2200,7 +2209,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 6)
             {
-                QString errorMsg = "Command requires 5 parameters (Device, State, Left Strength Value, Right Strength Value, Duration Value)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 5 parameters (Device, State, Left Strength Value, Right Strength Value, Duration Value)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("Force Feedback Advanced - Error", errorMsg);
                 return false;
             }
@@ -2209,7 +2218,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Device number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDevice: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Force Feedback Advanced - Error", errorMsg);
                 return false;
             }
@@ -2218,7 +2227,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Left strength value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nLeft Strength Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Left strength value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nLeft Strength Value: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Force Feedback Advanced - Error", errorMsg);
                 return false;
             }
@@ -2227,7 +2236,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Right strength value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nRight Strength Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Right strength value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nRight Strength Value: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Force Feedback Advanced - Error", errorMsg);
                 return false;
             }
@@ -2236,7 +2245,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Duration value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDuration Value: " + cmd[2] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Duration value is not a number!\nLine Number: " + QString::number(lineNumber) + "\nDuration Value: " + cmd[2] + "\nFile: " + iniFileName;
                 emit showErrorMessage("Force Feedback Advanced - Error", errorMsg);
                 return false;
             }
@@ -2256,7 +2265,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 4)
             {
-                QString errorMsg = "Command requires 3 parameters (Socket, Address, Port)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 3 parameters (Socket, Address, Port)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("TCP - Connect - Error", errorMsg);
                 return false;
             }
@@ -2265,7 +2274,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Socket number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nSocket: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Socket number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nSocket: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("TCP - Connect - Error", errorMsg);
                 return false;
             }
@@ -2274,7 +2283,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Port number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[3] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Port number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[3] + "\nFile: " + iniFileName;
                 emit showErrorMessage("TCP - Connect - Error", errorMsg);
                 return false;
             }
@@ -2290,7 +2299,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 2)
             {
-                QString errorMsg = "Command requires 1 parameter (Socket)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 1 parameter (Socket)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("TCP - Disconnect - Error", errorMsg);
                 return false;
             }
@@ -2299,7 +2308,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Socket number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nSocket: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Socket number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nSocket: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("TCP - Disconnect - Error", errorMsg);
                 return false;
             }
@@ -2315,7 +2324,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (cmd.size() < 3)
             {
-                QString errorMsg = "Command requires 2 parameters (Socket, Command)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+                QString errorMsg = "Command requires 2 parameters (Socket, Command)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("TCP - Send Command - Error", errorMsg);
                 return false;
             }
@@ -2324,7 +2333,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
             if (!isNumber)
             {
-                QString errorMsg = "Socket number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nSocket: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Socket number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nSocket: " + cmd[1] + "\nFile: " + iniFileName;
                 emit showErrorMessage("TCP - Send Command - Error", errorMsg);
                 return false;
             }
@@ -2341,7 +2350,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
         if (cmd.size() < 5)
         {
-            QString errorMsg = "Command requires 4 parameters (Type, Address, Port, Command)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+            QString errorMsg = "Command requires 4 parameters (Type, Address, Port, Command)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
             emit showErrorMessage("UDP - Send Command - Error", errorMsg);
             return false;
         }
@@ -2350,7 +2359,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
         if (!isNumber)
         {
-            QString errorMsg = "Type number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nType: " + cmd[1] + "\nFile: " + gameName + ENDOFINIFILE;
+            QString errorMsg = "Type number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nType: " + cmd[1] + "\nFile: " + iniFileName;
             emit showErrorMessage("UDP - Send Command - Error", errorMsg);
             return false;
         }
@@ -2359,7 +2368,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
         if (!isNumber)
         {
-            QString errorMsg = "Port number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[3] + "\nFile: " + gameName + ENDOFINIFILE;
+            QString errorMsg = "Port number is not a number!\nLine Number: " + QString::number(lineNumber) + "\nPort: " + cmd[3] + "\nFile: " + iniFileName;
             emit showErrorMessage("UDP - Send Command - Error", errorMsg);
             return false;
         }
@@ -2375,7 +2384,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
         if (cmd.size() < 4)
         {
-            QString errorMsg = "Command requires 3 parameters (URL, Content-Type, Request)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+            QString errorMsg = "Command requires 3 parameters (URL, Content-Type, Request)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
             emit showErrorMessage("HTTP POST - Send Request - Error", errorMsg);
             return false;
         }
@@ -2393,7 +2402,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
         {
             if (args.size() < 2)
             {
-                QString errorMsg = "Command requires at least 1 parameter (Path & Executable)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;
+                QString errorMsg = "Command requires at least 1 parameter (Path & Executable)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
                 emit showErrorMessage("Launch Application - Error", errorMsg);
                 return false;
             }
@@ -2433,7 +2442,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
         if (cmd.size() < 2)
         {
-            QString errorMsg = "Command requires 1 parameter (File)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;;
+            QString errorMsg = "Command requires 1 parameter (File)!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
             emit showErrorMessage("Play WAV Audio File - Error", errorMsg);
             return false;
         }
@@ -2443,7 +2452,7 @@ bool OutputHookerCore::checkINICommand(QString commandNotChk, quint16 lineNumber
 
         if (!QFile::exists(wavFilePath))
         {
-            QString errorMsg = wavFile + " not found!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + gameName + ENDOFINIFILE;
+            QString errorMsg = wavFile + " not found!\nLine Number: " + QString::number(lineNumber) + "\nFile: " + iniFileName;
             emit showErrorMessage("Play WAV Audio File - Error", errorMsg);
             return false;
         }
