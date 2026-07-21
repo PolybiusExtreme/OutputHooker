@@ -105,6 +105,41 @@ OutputHooker::OutputHooker(QWidget *parent)
     else
         ui->actionDefaultINI->setChecked(false);
 
+    // Get "Preferred Output Source" setting
+    outputSourcePriority = p_config->getOutputSourcePriority();
+    // Get "Output Processing Method" setting
+    outputProcessingMethod = p_config->getOutputProcessingMethod();
+
+    // Only one output source can be preferred, so the menu entries are made exclusive
+    outputPriorityGroup = new QActionGroup(this);
+    outputPriorityGroup->setExclusive(true);
+    outputPriorityGroup->addAction(ui->actionPriorityNetwork);
+    outputPriorityGroup->addAction(ui->actionPriorityWinMsg);
+
+    // Only one processing method can be used at a time
+    processingMethodGroup = new QActionGroup(this);
+    processingMethodGroup->setExclusive(true);
+    processingMethodGroup->addAction(ui->actionMethodPriority);
+    processingMethodGroup->addAction(ui->actionMethodExclusive);
+    processingMethodGroup->addAction(ui->actionMethodConcurrent);
+
+    // Check the menu entry of the preferred output source
+    if (outputSourcePriority == SourceWinMsg)
+        ui->actionPriorityWinMsg->setChecked(true);
+    else
+        ui->actionPriorityNetwork->setChecked(true);
+
+    // Check the menu entry of the processing method in use
+    if (outputProcessingMethod == MethodExclusive)
+        ui->actionMethodExclusive->setChecked(true);
+    else if (outputProcessingMethod == MethodConcurrent)
+        ui->actionMethodConcurrent->setChecked(true);
+    else
+        ui->actionMethodPriority->setChecked(true);
+
+    // Grey out the preferred output source, if both output streams are processed
+    updateOutputPriorityMenu();
+
     // Disable menu entry "Edit ini file for current game"
     ui->actionEditCurrentGameINI->setEnabled(false);
 
@@ -409,6 +444,90 @@ void OutputHooker::on_actionDefaultINI_triggered()
     // Start OutputHookerCore
     p_core->startCore();
     coreRunning = true;
+}
+
+// Set the Network output source as the one with priority
+void OutputHooker::on_actionPriorityNetwork_triggered()
+{
+    applyOutputSourcePriority(SourceNetwork);
+}
+
+// Set the Windows message system output source as the one with priority
+void OutputHooker::on_actionPriorityWinMsg_triggered()
+{
+    applyOutputSourcePriority(SourceWinMsg);
+}
+
+// Store the output source priority setting and restart the OutputHookerCore
+void OutputHooker::applyOutputSourcePriority(OutputSource osPriority)
+{
+    // Selecting the output source that already has priority would restart the
+    // OutputHookerCore for nothing and stop a game that is running
+    if (osPriority == outputSourcePriority)
+        return;
+
+    if (coreRunning)
+    {
+        // Stop OutputHookerCore
+        p_core->stopCore();
+        coreRunning = false;
+    }
+
+    outputSourcePriority = osPriority;
+    p_config->setOutputSourcePriority(outputSourcePriority);
+    p_config->saveSettings();
+
+    // Start OutputHookerCore
+    p_core->startCore();
+    coreRunning = true;
+}
+
+// Set how the two output streams are handled
+void OutputHooker::on_actionMethodPriority_triggered()
+{
+    applyOutputProcessingMethod(MethodPriority);
+}
+
+void OutputHooker::on_actionMethodExclusive_triggered()
+{
+    applyOutputProcessingMethod(MethodExclusive);
+}
+
+void OutputHooker::on_actionMethodConcurrent_triggered()
+{
+    applyOutputProcessingMethod(MethodConcurrent);
+}
+
+// Store the output processing method and restart the OutputHookerCore
+void OutputHooker::applyOutputProcessingMethod(OutputProcessingMethod opMethod)
+{
+    // Selecting the method that is already in use would restart the OutputHookerCore for
+    // nothing and stop a game that is running
+    if (opMethod == outputProcessingMethod)
+        return;
+
+    if (coreRunning)
+    {
+        // Stop OutputHookerCore
+        p_core->stopCore();
+        coreRunning = false;
+    }
+
+    outputProcessingMethod = opMethod;
+    p_config->setOutputProcessingMethod(outputProcessingMethod);
+    p_config->saveSettings();
+
+    updateOutputPriorityMenu();
+
+    // Start OutputHookerCore
+    p_core->startCore();
+    coreRunning = true;
+}
+
+// The preferred output source has no effect when both streams are processed
+void OutputHooker::updateOutputPriorityMenu()
+{
+    ui->menuOutputPriority->setEnabled(outputProcessingMethod != MethodConcurrent);
 }
 
 // Open the default.ini in EditorWindow

@@ -12,6 +12,11 @@ This tool acts as the essential bridge between emulators and your arcade hardwar
   - Network - Receive output data over network connections for modern setups
   - Windows Messages - Full backward compatibility with the "old" Windows messaging system
   - This means that any emulator, launcher, or tool works with **OutputHooker**!
+  - Output Processing Method - If an application sends outputs over both Network and Windows
+    Messages, *Settings* decides what happens. **Priority** uses the preferred output source and
+    falls back to the other one if it stays quiet, **Exclusive** uses only the preferred source,
+    and **Concurrent** processes both. The preferred source defaults to Network, and the method
+    defaults to Priority, so no command is sent to your hardware twice.
 
 - **Hardware Support**
   - Lightguns with COM Port support (Blamcon, Fusion, GUN4IR, OpenFIRE, RS MX24, RS Reaper, X-Gunner)
