@@ -49,6 +49,15 @@ public:
     OutputProcessingMethod getOutputProcessingMethod();
     void setOutputProcessingMethod(OutputProcessingMethod opMethod);
 
+    // Start OutputHooker in the system tray
+    bool getStartMinimized();
+    void setStartMinimized(bool sMinimized);
+
+    // Start OutputHooker with Windows. Read from and written to the registry Run key,
+    // not the INI file, so the menu always shows what Windows will actually do
+    bool getAutostartWithSystem();
+    void setAutostartWithSystem(bool awSystem);
+
     // Get COM Port placeholders
     QMap<QString, QString> getComPortPlaceholders();
 
@@ -67,6 +76,7 @@ private:
     bool bypassSerialWriteChecks;
     OutputSource outputSourcePriority;
     OutputProcessingMethod outputProcessingMethod;
+    bool startMinimized;
 
     // QMap - COM Port placeholders
     QMap<QString, QString> comPortPlaceholders;
