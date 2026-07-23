@@ -337,6 +337,7 @@ struct SdlCtrlData
 // The speed is controlled by the Global Pulse Speed parameter
 
 #define LEDWIZMAXDEVICES        16
+#define LEDWIZMAXPINS           32
 
 struct LedWizData
 {

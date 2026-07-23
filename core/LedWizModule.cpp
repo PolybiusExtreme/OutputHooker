@@ -107,6 +107,14 @@ void LedWizModule::setPinState(quint8 id, quint8 pin, bool state)
 {
     if (id < numberLedWizDevices)
     {
+        // Pins are 1 based. Without this check a pin of 0 shifts by a negative amount
+        // and a pin above the channel count writes past the bank array
+        if (pin < 1 || pin > LEDWIZMAXPINS)
+        {
+            emit showErrorMessage("Invalid LEDWiz Pin!", "Pin " + QString::number(pin) + " is not in the range 1 - " + QString::number(LEDWIZMAXPINS) + "!");
+            return;
+        }
+
         int bankIndex = (pin - 1) / 8;
         int bitIndex = (pin - 1) % 8;
 
@@ -129,6 +137,12 @@ void LedWizModule::setPowerLevel(quint8 id, quint8 pin, quint8 power)
 {
     if (id < numberLedWizDevices)
     {
+        if (pin < 1 || pin > LEDWIZMAXPINS)
+        {
+            emit showErrorMessage("Invalid LEDWiz Pin!", "Pin " + QString::number(pin) + " is not in the range 1 - " + QString::number(LEDWIZMAXPINS) + "!");
+            return;
+        }
+
         m_deviceCache[id].pbaLevels[pin - 1] = validatePowerValue(power);
         updatePBA(id);
     }
@@ -144,6 +158,14 @@ void LedWizModule::setRGBColor(quint8 id, quint8 pin, quint8 valueR, quint8 valu
 {
     if (id < numberLedWizDevices)
     {
+        // An RGB LED uses the pin and the two channels after it, so the last pin that
+        // still fits is two below the channel count
+        if (pin < 1 || pin > LEDWIZMAXPINS - 2)
+        {
+            emit showErrorMessage("Invalid LEDWiz Pin!", "RGB pin " + QString::number(pin) + " is not in the range 1 - " + QString::number(LEDWIZMAXPINS - 2) + "!");
+            return;
+        }
+
         LedWizCache &cache = m_deviceCache[id];
         cache.pbaLevels[pin - 1] = validatePowerValue(valueR);
         cache.pbaLevels[pin]     = validatePowerValue(valueG);
