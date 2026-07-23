@@ -313,6 +313,9 @@ private:
     // Process commands based on INI file
     void processINICommands(QString signalName, QString value, bool isState);
 
+    // Replace the COM Port placeholders with the COM Port numbers
+    QStringList resolveComPortPlaceholders(const QStringList &commands);
+
     // Execute commands based on INI file
     void executeINICommands(const QStringList &commands, const QString &value);
 
