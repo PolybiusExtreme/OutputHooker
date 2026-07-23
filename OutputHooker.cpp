@@ -281,7 +281,30 @@ void OutputHooker::updateConnectionStatus(OutputHookerCore::ConnectionType type,
 // Handle Error MessageBox from a different thread
 void OutputHooker::errorMessage(const QString title, const QString message)
 {
-    GuiUtilities::showMessageBoxCentered(this, title, message, QMessageBox::Critical);
+    // The same error can arrive many times in a row, for example an output that keeps
+    // addressing a device that is not connected. Rather than stack a new dialog for each,
+    // the dialog already open for that error keeps a count of how often it was seen.
+    const QString key = title + QChar(0x1F) + message;
+
+    if (openErrorBoxes.contains(key))
+    {
+        const int seen = ++errorBoxCounts[key];
+        openErrorBoxes[key]->setText(message + QString("\n\nThis error has occurred %1 times.").arg(seen));
+        return;
+    }
+
+    QMessageBox box(QMessageBox::Critical, title, message, QMessageBox::Ok, this);
+    GuiUtilities::centerWidgetOnScreen(&box);
+
+    // Tracked only while it is open, so a repeat updates this dialog instead of opening a
+    // new one. The entries are removed once the user closes it
+    openErrorBoxes.insert(key, &box);
+    errorBoxCounts.insert(key, 1);
+
+    box.exec();
+
+    openErrorBoxes.remove(key);
+    errorBoxCounts.remove(key);
 }
 
 // Process new connection (needed for command line arguments)
