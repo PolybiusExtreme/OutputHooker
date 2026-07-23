@@ -29,6 +29,8 @@
 
 #include <Windows.h>
 
+class QMessageBox;
+
 namespace Ui {
 class OutputHooker;
 }
@@ -215,6 +217,11 @@ private:
 
     // Maps where the Output data is in the display data
     QMap<QString, QListWidgetItem*> signalItemMap;
+
+    // Error dialogs that are currently open, keyed by the error text. A repeat of the same
+    // error updates its open dialog with a count instead of stacking a new dialog
+    QMap<QString, QMessageBox*> openErrorBoxes;
+    QMap<QString, int> errorBoxCounts;
 
     // Pointer for the static info lines
     QListWidgetItem* romItem = nullptr;
