@@ -21,6 +21,11 @@ OutputHookerCore::OutputHookerCore(OutputHookerConfig *ohConfig, QObject *parent
     isWinMsgConnected = false;
     isTCPSocketConnected = false;
 
+    // No output source owns the output stream and none is waiting for the arbitration
+    activeOutputSource = SourceNone;
+    pendingOutputSource = SourceNone;
+    pendingIsEmptyGame = false;
+
     // If game is found
     isGameFound = false;
     // If a game has ran
@@ -288,6 +293,11 @@ OutputHookerCore::OutputHookerCore(OutputHookerConfig *ohConfig, QObject *parent
     keyStateTimer = new QTimer(this);
     connect(keyStateTimer, &QTimer::timeout, this, &OutputHookerCore::checkKeyStates);
 
+    // Output source arbitration timer
+    sourceArbitrationTimer = new QTimer(this);
+    sourceArbitrationTimer->setSingleShot(true);
+    connect(sourceArbitrationTimer, &QTimer::timeout, this, &OutputHookerCore::resolvePendingSource);
+
     // Load settings
     loadSettingsFromList();
 }
@@ -344,11 +354,8 @@ void OutputHookerCore::startCore()
 
     isCoreStarted = true;
 
-    // Start the Windows message system connection
-    emit startWinMsg();
-
-    // Start the TCP connection
-    emit startTCPSocket();
+    // Start the output source(s) the processing method allows
+    startOutputSources();
 }
 
 // Stop the OutputHookerCore
@@ -370,6 +377,8 @@ void OutputHookerCore::loadSettingsFromList()
     useNewOutputsNotification = p_config->getUseNewOutputsNotification();
     addNewOutputsToDefaultINI = p_config->getAddNewOutputsToDefaultINI();
     bypassSerialWriteChecks = p_config->getSerialPortWriteCheckBypass();
+    priorityOutputSource = p_config->getOutputSourcePriority();
+    outputProcessingMethod = p_config->getOutputProcessingMethod();
     // Don't get Multi-Threading, as it needs a application reset
     // useMultiThreading = p_config->getUseMultiThreading();
 
@@ -710,7 +719,10 @@ void OutputHookerCore::winMsgDisconnected()
     isWinMsgConnected = false;
     emit connectionStatus(OutputHookerCore::WinMsg, isWinMsgConnected);
 
-    if (!gameHasStopped)
+    // Only stop the game if the Windows message system is the output source running it.
+    // Without this check the Network output source losing its connection would tear down
+    // a game that the Windows message system owns, and the other way around
+    if (!gameHasStopped && (activeOutputSource == SourceNone || activeOutputSource == SourceWinMsg))
         gameStopped();
 
     if (!p_winMsg->isConnected && !p_winMsg->isConnecting)
@@ -730,7 +742,8 @@ void OutputHookerCore::tcpDisconnected()
     isTCPSocketConnected = false;
     emit connectionStatus(OutputHookerCore::TCP, isTCPSocketConnected);
 
-    if (!gameHasStopped)
+    // Only stop the game if the Network output source is the one running it
+    if (!gameHasStopped && (activeOutputSource == SourceNone || activeOutputSource == SourceNetwork))
         gameStopped();
 
     if (!p_tcpSocket->isConnected && !p_tcpSocket->isConnecting)
@@ -760,9 +773,70 @@ void OutputHookerCore::checkKeyStates()
     }
 }
 
+// Which output source emitted the signal that is being handled
+OutputSource OutputHookerCore::sourceOfSender()
+{
+    QObject* dynamicSender = sender();
+
+    if (dynamicSender == p_winMsg)
+        return SourceWinMsg;
+    else if (dynamicSender == p_tcpSocket)
+        return SourceNetwork;
+
+    return SourceNone;
+}
+
+// Start the output sources that the current processing method allows
+void OutputHookerCore::startOutputSources()
+{
+    // With the Exclusive method only the preferred output source is used, so the other
+    // one is never started. That keeps it from installing its event filter or polling
+    // for a connection whose data would only be thrown away
+    if (outputProcessingMethod != MethodExclusive || priorityOutputSource == SourceWinMsg)
+        emit startWinMsg();
+
+    if (outputProcessingMethod != MethodExclusive || priorityOutputSource == SourceNetwork)
+        emit startTCPSocket();
+}
+
+// Give one output source the output stream and stop the other output source
+void OutputHookerCore::claimOutputSource(OutputSource source)
+{
+    activeOutputSource = source;
+
+    if (source == SourceWinMsg)
+        emit stopTCPSocket();
+    else if (source == SourceNetwork)
+        emit stopWinMsg();
+}
+
+// Let the waiting output source claim the output stream, when the arbitration time ran out
+void OutputHookerCore::resolvePendingSource()
+{
+    // The output source with priority reported in while the arbitration was running,
+    // so there is nothing left to resolve
+    if (activeOutputSource != SourceNone || pendingOutputSource == SourceNone)
+        return;
+
+    OutputSource source = pendingOutputSource;
+    pendingOutputSource = SourceNone;
+
+    claimOutputSource(source);
+
+    if (pendingIsEmptyGame)
+        startEmptyGameSession();
+    else
+        startGameSession(pendingGameName);
+}
+
 // Process data
 void OutputHookerCore::processData(const QString &signal, const QString &data)
 {
+    // Drop data from an output source that does not own the output stream. The output source
+    // that lost the arbitration is stopped, but data it already sent can still be on its way
+    if (outputProcessingMethod != MethodConcurrent && activeOutputSource != SourceNone && sourceOfSender() != activeOutputSource)
+        return;
+
     QString tempSignal = signal;
 
     if (signal == ORIENTATION)
@@ -829,19 +903,69 @@ void OutputHookerCore::processData(const QString &signal, const QString &data)
     }
 }
 
+// Decide if an output source is allowed to run the game it reported
+bool OutputHookerCore::arbitrateOutputSource(OutputSource source, const QString &data, bool isEmptyGame)
+{
+    // Both output streams are processed, so there is nothing to arbitrate.
+    // An unknown output source is never held back, so a game can not get lost
+    if (outputProcessingMethod == MethodConcurrent || source == SourceNone)
+        return true;
+
+    // Only the preferred output source is used. The other one is not started at all, so
+    // this just turns away anything that still arrives from it
+    if (outputProcessingMethod == MethodExclusive)
+    {
+        if (source != priorityOutputSource)
+            return false;
+
+        if (activeOutputSource == SourceNone)
+            claimOutputSource(source);
+
+        return true;
+    }
+
+    if (activeOutputSource == SourceNone)
+    {
+        // Hold back an output source without priority for a short time, to give the output
+        // source with priority the chance to report the same game
+        if (source != priorityOutputSource)
+        {
+            pendingOutputSource = source;
+            pendingGameName = data;
+            pendingIsEmptyGame = isEmptyGame;
+            sourceArbitrationTimer->start(SOURCEARBITRATIONWAIT);
+            return false;
+        }
+
+        // The output source with priority takes the output stream right away and drops
+        // an output source that is still waiting for the arbitration time to run out
+        sourceArbitrationTimer->stop();
+        pendingOutputSource = SourceNone;
+        claimOutputSource(source);
+
+        return true;
+    }
+
+    // Only the output source that owns the output stream is allowed to run the game
+    return (activeOutputSource == source);
+}
+
 // Game start process
 void OutputHookerCore::gameStart(const QString &data)
 {
-    QObject* dynamicSender = sender();
+    if (!arbitrateOutputSource(sourceOfSender(), data, false))
+        return;
 
-    if (dynamicSender == p_winMsg)
-    {
-        emit stopTCPSocket();
-    }
-    else if (dynamicSender == p_tcpSocket)
-    {
-        emit stopWinMsg();
-    }
+    startGameSession(data);
+}
+
+// Game start process, after the output source arbitration
+void OutputHookerCore::startGameSession(const QString &data)
+{
+    // The same game reported a second time would load the INI file again and run the
+    // 'mame_start' commands twice. This happens if both output streams are processed
+    if (isGameFound && gameName == data)
+        return;
 
     gameName = data;
     iniName = gameName;
@@ -858,17 +982,15 @@ void OutputHookerCore::gameStart(const QString &data)
 // Empty game start process
 void OutputHookerCore::emptyGameStart()
 {
-    QObject* dynamicSender = sender();
+    if (!arbitrateOutputSource(sourceOfSender(), QString(), true))
+        return;
 
-    if (dynamicSender == p_winMsg)
-    {
-        emit stopTCPSocket();
-    }
-    else if (dynamicSender == p_tcpSocket)
-    {
-        emit stopWinMsg();
-    }
+    startEmptyGameSession();
+}
 
+// Empty game start process, after the output source arbitration
+void OutputHookerCore::startEmptyGameSession()
+{
     emit connectedEmptyGame();
     isEmptyGame = true;
     gameHasStopped = false;
@@ -999,10 +1121,18 @@ void OutputHookerCore::gameStopped()
     iniFileLoaded = false;
     gameHasStopped = true;
 
+    // Release the output stream, so both output sources arbitrate again on the next game
+    sourceArbitrationTimer->stop();
+    activeOutputSource = SourceNone;
+    pendingOutputSource = SourceNone;
+    pendingIsEmptyGame = false;
+    pendingGameName.clear();
+
     if (isCoreStarted)
     {
-        emit startWinMsg();
-        emit startTCPSocket();
+        // Same set of output sources as on start up, so an excluded one does not come
+        // back to life once the first game has ended
+        startOutputSources();
 
         emit connectionStatus(OutputHookerCore::WinMsg, isWinMsgConnected);
         emit connectionStatus(OutputHookerCore::TCP, isTCPSocketConnected);

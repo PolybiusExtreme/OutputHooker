@@ -81,8 +81,26 @@
     <property name="title">
      <string>Settings</string>
     </property>
+    <widget class="QMenu" name="menuProcessingMethod">
+     <property name="title">
+      <string>Output Processing Method</string>
+     </property>
+     <addaction name="actionMethodExclusive"/>
+     <addaction name="actionMethodPriority"/>
+     <addaction name="actionMethodConcurrent"/>
+    </widget>
+    <widget class="QMenu" name="menuOutputPriority">
+     <property name="title">
+      <string>Preferred Output Source</string>
+     </property>
+     <addaction name="actionPriorityNetwork"/>
+     <addaction name="actionPriorityWinMsg"/>
+    </widget>
     <addaction name="actionNotification"/>
     <addaction name="actionDefaultINI"/>
+    <addaction name="separator"/>
+    <addaction name="menuProcessingMethod"/>
+    <addaction name="menuOutputPriority"/>
    </widget>
    <addaction name="menuOptions"/>
    <addaction name="menuSettings"/>
@@ -150,6 +168,46 @@
   <action name="actionConnectedDevices">
    <property name="text">
     <string>Connected Device(s)</string>
+   </property>
+  </action>
+  <action name="actionPriorityNetwork">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Network</string>
+   </property>
+  </action>
+  <action name="actionPriorityWinMsg">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Windows Messages</string>
+   </property>
+  </action>
+  <action name="actionMethodPriority">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Priority</string>
+   </property>
+  </action>
+  <action name="actionMethodExclusive">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Exclusive</string>
+   </property>
+  </action>
+  <action name="actionMethodConcurrent">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Concurrent</string>
    </property>
   </action>
  </widget>

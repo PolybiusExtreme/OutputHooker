@@ -54,6 +54,9 @@ class OutputHookerCore : public QObject
     // Timer for KeyStates
     QTimer *keyStateTimer;
 
+    // Timer for the output source arbitration
+    QTimer *sourceArbitrationTimer;
+
 public:
     explicit OutputHookerCore(OutputHookerConfig *ohConfig, QObject *parent = nullptr);
     ~OutputHookerCore();
@@ -216,6 +219,9 @@ private slots:
     // Check KeyStates
     void checkKeyStates();
 
+    // Let the waiting output source claim the output stream, when the arbitration time ran out
+    void resolvePendingSource();
+
     // Process data
     void processData(const QString &signal, const QString &data);
 
@@ -258,6 +264,24 @@ private:
 
     // QMap - COM Port placeholders
     QMap<QString, QString> comPortPlaceholders;
+
+    // Which output source emitted the signal that is being handled
+    OutputSource sourceOfSender();
+
+    // Start the output sources that the current processing method allows
+    void startOutputSources();
+
+    // Give one output source the output stream and stop the other output source
+    void claimOutputSource(OutputSource source);
+
+    // Decide if an output source is allowed to run the game it reported
+    bool arbitrateOutputSource(OutputSource source, const QString &data, bool isEmptyGame);
+
+    // Game start process, after the output source arbitration
+    void startGameSession(const QString &data);
+
+    // Empty game start process, after the output source arbitration
+    void startEmptyGameSession();
 
     // Game found process
     void gameFound();
@@ -429,6 +453,16 @@ private:
     bool addNewOutputsToDefaultINI;
     bool useMultiThreading;
     bool bypassSerialWriteChecks;
+    OutputSource priorityOutputSource;
+    OutputProcessingMethod outputProcessingMethod;
+
+    // Output source that currently owns the output stream
+    OutputSource activeOutputSource;
+
+    // Output source waiting for the arbitration time to run out, with its game data
+    OutputSource pendingOutputSource;
+    QString pendingGameName;
+    bool pendingIsEmptyGame;
 
     // Is OutputHooker minimized in the tray
     bool isOutputHookerMinimized;

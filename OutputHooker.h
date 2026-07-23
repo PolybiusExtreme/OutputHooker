@@ -17,6 +17,7 @@
 #include <QCloseEvent>
 #include <QLocalServer>
 #include <QLocalSocket>
+#include <QActionGroup>
 
 #include "gui/DeviceWindow.h"
 #include "gui/TestOutputWindow.h"
@@ -108,6 +109,17 @@ private slots:
     // Change default.ini setting
     void on_actionDefaultINI_triggered();
 
+    // Set the Network output source as the one with priority
+    void on_actionPriorityNetwork_triggered();
+
+    // Set the Windows message system output source as the one with priority
+    void on_actionPriorityWinMsg_triggered();
+
+    // Set how the two output streams are handled
+    void on_actionMethodPriority_triggered();
+    void on_actionMethodExclusive_triggered();
+    void on_actionMethodConcurrent_triggered();
+
     // Open the default.ini in EditorWindow
     void on_actionEditDefaultINI_triggered();
 
@@ -164,6 +176,25 @@ private:
     // Bool settings
     bool useNewOutputsNotification;
     bool addNewOutputsToDefaultINI;
+
+    // Output source that is preferred
+    OutputSource outputSourcePriority;
+
+    // How the two output streams are handled
+    OutputProcessingMethod outputProcessingMethod;
+
+    // Make each set of menu entries exclusive
+    QActionGroup *outputPriorityGroup;
+    QActionGroup *processingMethodGroup;
+
+    // Store the preferred output source and restart the OutputHookerCore
+    void applyOutputSourcePriority(OutputSource osPriority);
+
+    // Store the output processing method and restart the OutputHookerCore
+    void applyOutputProcessingMethod(OutputProcessingMethod opMethod);
+
+    // The preferred output source has no effect when both streams are processed
+    void updateOutputPriorityMenu();
 
     // If a child window is open, stop the core
     // If a child window is closed, restart the core

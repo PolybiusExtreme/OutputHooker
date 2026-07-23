@@ -19,6 +19,8 @@ OutputHookerConfig::OutputHookerConfig(QObject *parent)
     addNewOutputsToDefaultINI = false;
     useMultiThreading = true;
     bypassSerialWriteChecks = false;
+    outputSourcePriority = SourceNetwork;
+    outputProcessingMethod = MethodPriority;
 
     // Define save file and the path
     settingsFile = QApplication::applicationDirPath() + "/" SETTINGSFILE;
@@ -40,6 +42,15 @@ void OutputHookerConfig::saveSettings()
     settings.setValue("NotificationOnNewOutputs", useNewOutputsNotification);
     settings.setValue("AddNewOutputsToDefaultINI", addNewOutputsToDefaultINI);
     settings.setValue("MultiThreading", useMultiThreading);
+    settings.setValue("OutputSourcePriority", (outputSourcePriority == SourceWinMsg) ? PRIORITYWINMSGNAME : PRIORITYNETWORKNAME);
+
+    QString methodName = METHODPRIORITYNAME;
+    if (outputProcessingMethod == MethodExclusive)
+        methodName = METHODEXCLUSIVENAME;
+    else if (outputProcessingMethod == MethodConcurrent)
+        methodName = METHODCONCURRENTNAME;
+
+    settings.setValue("OutputProcessingMethod", methodName);
     settings.endGroup();
 
     settings.beginGroup("COM_Ports");
@@ -67,6 +78,20 @@ void OutputHookerConfig::loadSettings()
     useNewOutputsNotification = (settings.value("NotificationOnNewOutputs", useNewOutputsNotification).toBool());
     addNewOutputsToDefaultINI = (settings.value("AddNewOutputsToDefaultINI", addNewOutputsToDefaultINI).toBool());
     useMultiThreading = (settings.value("MultiThreading", useMultiThreading).toBool());
+
+    // Only the Windows message system moves the preference away from the default (Network)
+    outputSourcePriority = (settings.value("OutputSourcePriority", PRIORITYNETWORKNAME).toString().compare(PRIORITYWINMSGNAME, Qt::CaseInsensitive) == 0) ? SourceWinMsg : SourceNetwork;
+
+    // Anything that is not Exclusive or Concurrent falls back to the default (Priority)
+    QString methodName = settings.value("OutputProcessingMethod", METHODPRIORITYNAME).toString();
+
+    if (methodName.compare(METHODEXCLUSIVENAME, Qt::CaseInsensitive) == 0)
+        outputProcessingMethod = MethodExclusive;
+    else if (methodName.compare(METHODCONCURRENTNAME, Qt::CaseInsensitive) == 0)
+        outputProcessingMethod = MethodConcurrent;
+    else
+        outputProcessingMethod = MethodPriority;
+
     settings.endGroup();
 
     comPortPlaceholders.clear();
@@ -113,6 +138,26 @@ bool OutputHookerConfig::getUseMultiThreading()
 void OutputHookerConfig::setUseMultiThreading(bool umThreading)
 {
     useMultiThreading = umThreading;
+}
+
+OutputSource OutputHookerConfig::getOutputSourcePriority()
+{
+    return outputSourcePriority;
+}
+
+void OutputHookerConfig::setOutputSourcePriority(OutputSource osPriority)
+{
+    outputSourcePriority = osPriority;
+}
+
+OutputProcessingMethod OutputHookerConfig::getOutputProcessingMethod()
+{
+    return outputProcessingMethod;
+}
+
+void OutputHookerConfig::setOutputProcessingMethod(OutputProcessingMethod opMethod)
+{
+    outputProcessingMethod = opMethod;
 }
 
 QMap<QString, QString> OutputHookerConfig::getComPortPlaceholders()
