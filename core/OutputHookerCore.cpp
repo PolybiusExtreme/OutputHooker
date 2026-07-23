@@ -1012,6 +1012,11 @@ void OutputHookerCore::gameStopped()
 // Game found process
 void OutputHookerCore::gameFound()
 {
+    // The game INI file path is used later, when new outputs are appended after the game
+    // stops. It is set here explicitly so it no longer depends on the order the INI file
+    // checks below happen to run in
+    gameINIFilePath = iniPath + "/" + gameName + ENDOFINIFILE;
+
     // Checks if a default INI file exists
     isDefaultINI = isDefaultINIFile();
 
@@ -1053,15 +1058,13 @@ void OutputHookerCore::gameFound()
 // Check if an INI file exists for the game
 bool OutputHookerCore::isINIFile()
 {
-    gameINIFilePath = iniPath + "/" + gameName + ENDOFINIFILE;
-    return QFile::exists(gameINIFilePath);
+    return QFile::exists(iniPath + "/" + gameName + ENDOFINIFILE);
 }
 
 // Check if an default INI file exists
 bool OutputHookerCore::isDefaultINIFile()
 {
-    gameINIFilePath = iniPath + "/" + DEFAULTFILE + ENDOFINIFILE;
-    return QFile::exists(gameINIFilePath);
+    return QFile::exists(iniPath + "/" + DEFAULTFILE + ENDOFINIFILE);
 }
 
 QStringList splitCommands(const QString &commands)
