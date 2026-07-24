@@ -13,9 +13,9 @@
 #include <windows.h>
 
 // Version info
-#define VERSION                 "1.6.0"
+#define VERSION                 "1.7.0"
 #define VERSIONMAIN             1
-#define VERSIONMID              6
+#define VERSIONMID              7
 #define VERSIONLAST             0
 
 // Settings
