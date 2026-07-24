@@ -96,7 +96,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>320</y>
+     <y>315</y>
      <width>380</width>
      <height>17</height>
     </rect>
@@ -118,9 +118,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>340</y>
+     <y>335</y>
      <width>380</width>
-     <height>70</height>
+     <height>90</height>
     </rect>
    </property>
    <property name="font">
@@ -132,6 +132,7 @@
    <property name="text">
     <string>Howard Casto (MAMEHooker &amp; MAME Interop SDK developer)
 Ben Baker (MAME Interop SDK &amp; Ultimarc SDK developer)
+DJ GLiTCH (MAME State Output Project developer)
 Aaron Giles (MAME output code developer)
 6Bolt (Hook of the Reaper developer)</string>
    </property>
@@ -146,7 +147,7 @@ Aaron Giles (MAME output code developer)
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>420</y>
+     <y>430</y>
      <width>380</width>
      <height>1</height>
     </rect>
@@ -159,7 +160,7 @@ Aaron Giles (MAME output code developer)
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>430</y>
+     <y>435</y>
      <width>380</width>
      <height>30</height>
     </rect>
