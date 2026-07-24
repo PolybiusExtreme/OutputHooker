@@ -73,7 +73,7 @@ and the SDL3 library for generic gamecontrollers.
 - Howard Casto (MAMEHooker & MAME Interop SDK developer)
 - Ben Baker (MAME Interop SDK & Ultimarc SDK developer)
 - Aaron Giles (MAME output code developer)
-- djGliTCH (MAME State Output Project (MSOP) developer)
+- djGLiTCH (MAME State Output Project (MSOP) developer)
 - 6Bolt ([Hook of the Reaper](https://hotr.6bolt.com/) developer)
 
 ## Special Thanks
